@@ -40,7 +40,21 @@ class Interface:
 
         self.image_saver = None # recebe função para salvar imagens
 
-        self.fig, self.axes = plt.subplots(num="Renderizador - "+filename)
+        dpi = 100
+        if self.width > 640:
+            largura = self.width/dpi
+        else:
+            largura = 640/dpi
+        if self.height > 480:
+            altura = self.height/dpi
+        else:
+            altura = 480/dpi
+        self.fig, self.axes = plt.subplots(
+            num="Renderizador - " + filename,
+            figsize=(largura, altura),
+            dpi=dpi
+        )
+        self.fig.subplots_adjust(left=0.08, right=0.76, bottom=0.15, top=0.98)
         self.fig.tight_layout(rect=(0, 0.05, 1, 0.98))
 
         self.axes.axis([0, width, height, 0])  # [xmin, xmax, ymin, ymax]
@@ -194,8 +208,16 @@ class Interface:
         for geometria in self.geometrias:
             geometria.set_visible(False)
 
+        if self.height > 480:
+            altura = self.height
+        else:
+            altura = 480
+        m = -1/6500
+        b = 129/650
+        alt_but = -0.0001 * altura + 0.15
+
         # Configura todos os botões da interface
-        bgeogrid = CheckButtons(plt.axes([0.78, 0.02, 0.18, 0.10]), ['Grid', 'Geometria'])
+        bgeogrid = CheckButtons(plt.axes([0.68, 0.02, 0.18, alt_but]), ['Grid', 'Geometria'])
         bgeogrid.on_clicked(self.exibe_geometrias_grid)
 
         bsave = Button(plt.axes([0.4, 0.02, 0.15, 0.06]), 'Salvar')
