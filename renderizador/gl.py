@@ -78,97 +78,118 @@ class GL:
         # vira uma quantidade par de valores.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o Polyline2D
         # você pode assumir inicialmente o desenho das linhas com a cor emissiva (emissiveColor).
+        # width = gpu.GPU.frame_buffer[gpu.GPU.read_framebuffer].depth.shape
+        # print("a",width)
+        # print(gpu.FrameBuffer.depth.shape)
+        def limite(u,v):
+            if u>=0:
+                if u< GL.width:
+                    if v>=0:
+                        if v<GL.height:
+                            return True
+            return False
+        def acha_s(p0,p1):
+            s = 0
+            if(p1[0]-p0[0]) != 0:
+                s = (p1[1]-p0[1])/(p1[0]-p0[0])
+            print(p0, s)
+            return s
+        def uv(p0,p1):
+            if p0[0]<=p1[0]:
+                return [p0[0],p0[1],p1[0],p1[1]]
+            else:
+                return [p1[0],p1[1],p0[0],p0[1]]
+        def vu(p0,p1):
+            if p0[1]<=p1[1]:
+                return [p0[0],p0[1],p1[0],p1[1]]
+            else:
+                return [p1[0],p1[1],p0[0],p0[1]]
+        def preenche_linha(p0,p1,s, r, g, b):
+            if s>0.0:
+                if s<1:
+                    p = uv(p0,p1)
+                    u = p[0]
+                    v = p[1]
+                    while u<= p[2]:
+                        if limite(u,v):
+                            gpu.GPU.draw_pixel([int(u), int(v)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
+                        u+=1
+                        v+=s
+            if s<0:
+                if s>-1:
+                                        # print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+                    p = uv(p0,p1)
+                    u = p[2]
+                    v = p[3]
+                    while u>= p[0]:
+                        if limite(u,v):
+                                gpu.GPU.draw_pixel([int(u), int(v)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
+                        u-=1
+                        v-=s
+            if s>1:
+                s = 1/s
+                p = vu(p0,p1)
+                u = p[0]
+                v = p[1]
+                while v<= p[3]:
+                    if limite(u,v):
+                        gpu.GPU.draw_pixel([int(u), int(v)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
+                    u+=s
+                    v+=1
+            if s<-1:
+                s = 1/s
+                p = vu(p0,p1)
+                u = p[2]
+                v = p[3]
+                while v>= p[1]:
+                    if limite(u,v):
+                        print(u, v)
+                        gpu.GPU.draw_pixel([int(u), int(v)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
+                    u-=s
+                    v-=1
+            if s == 0:
+                p = uv(p0,p1)
+                i=p[0]
+                while i<p[2]:
+                    if limite(i,p[1]):
+                        gpu.GPU.draw_pixel([int(i), int(p[1])], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
+                    i+=1
+            if abs(s) == 0:
+                p = vu(p0,p1)
+                i=p[1]
+                while i<p[3]:
+                    if limite(p[0],i):
+                        gpu.GPU.draw_pixel([int(p[0]), int(i)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
+                    i+=1                   
         cor =colors["emissiveColor"]
 
         print("Polyline2D : lineSegments = {0}".format(lineSegments)) # imprime no terminal
         print("Polyline2D : colors = {0}".format(colors)) # imprime no terminal as cores
         print(len(lineSegments))
-        def arredonda(v):
-            delta = v-int(v)
-            if delta>0.5:
-                return int(v+1)
-            return int(v)
-        def cria_linha(p0,p1,r,g,b):
-            s = 0
-            if(p1[1]-p0[1]) != 0:
-                s = (p1[0]-p0[0])/(p1[1]-p0[1])
-            print(p0, s)
-            if abs(s)<=1:
-                if p0[1]<p1[1]:
-                    u = p0[1]
-                    v=p0[0]
-                    while u<p1[1]:
-                    # frame_buffer[round(v)][u] = 1
-                        # print(v,int(v))
-                        gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
-                    
-                        v+=s
-                        u+=1
-                if p0[1]>=p1[1]:
-                    u = p0[1]
-                    v=p0[0]
-                    while u>p1[1]:
-                    # frame_buffer[round(v)][u] = 1
-                        gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
-                        v-=s
-                        u-=1
-            
-            if abs(s)>1:
-                s = 1/s
-                if p0[0]<=p1[0]:
-                    u = p0[1]
-                    v=p0[0]
-                    while v<p1[0]:
-                    # frame_buffer[round(v)][u] = 1
-                        # print(v,int(v))
-                        gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
-                    
-                        v+=1
-                        u+=s
-                if p0[0]>p1[0]:
-                    u = p0[1]
-                    v=p0[0]
-                    while v>p1[0]:
-                    # frame_buffer[round(v)][u] = 1
-                        gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
-                        v-=1
-                        u-=s
-            
-            if s == 0:
-                u = p0[1]
-                v=p0[0]
-                if p0[0]>p1[0]:
-                    while v>p1[0]:
-                        # frame_buffer[v][u] = 1
-                        gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
-                        
-                        v-=1
-                if p0[0]<p1[0]:
-                    while v<p1[0]:
-                        # frame_buffer[v][u] = 1
-                        gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
-                        v+=1
-        i = 0
-        pontos =[]
+        i =0 
+        pontos = []
+        r= 255*cor[0]
+        g=255*cor[1]
+        b=255*cor[2]
         while i<len(lineSegments):
-            x_1 = lineSegments[i]
-            y_1= lineSegments[i+1]
-            pontos.append([y_1,x_1])
+            x = lineSegments[i]
+            y = lineSegments[i+1]
+            print("x",x,"y",y,GL.width,GL.height)
+            # if x>0:
+            #     if y>0:
+            #         if x<GL.width:
+            #         # y = lineSegments[i+1]
+            #             if y<GL.height:
+            pontos.append([x,y])
             i+=2
-        j = 0
+        j =1 
         while j<len(pontos):
-            # print("x:",lineSegments[i])
-            # print("y:",lineSegments[i+1])
-            p1 = pontos[j]
-            if (j+1)==len(pontos):
-                p2 = pontos[0]
-            else:
-                p2 = pontos[j+1]
-            r= 255 *cor[0]
-            g=255*cor[1]
-            b=255*cor[2]
-            # gpu.GPU.draw_pixel([int(x), int(y)], gpu.GPU.RGB8, [r, g, b])
-            cria_linha(p1,p2,r,g,b)
+            p_0=pontos[j-1]
+            p_1=pontos[j]
+            s=acha_s(p_0,p_1)
+            preenche_linha(p_0,p_1,s, r, g, b)
+            # gpu.GPU.draw_pixel([int(p_0[0]), int(p_0[1])], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
+            # gpu.GPU.draw_pixel([int(p_1[0]), int(p_1[1])], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
             j+=1
         # Exemplo:
         # pos_x = GL.width//2
@@ -208,7 +229,13 @@ class GL:
         # você pode assumir inicialmente o desenho das linhas com a cor emissiva (emissiveColor).
         print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
         print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
-
+        def limite(u,v):
+            if u>=0:
+                if u< GL.width:
+                    if v>=0:
+                        if v<GL.height:
+                            return True
+            return False
         cor = colors["emissiveColor"]
         r=225*cor[0]
         g=255*cor[1]
@@ -278,7 +305,8 @@ class GL:
                     # print(i,j)
                     # gpu.GPU.draw_pixel([int(i), int(j)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)        
                     if esta_dentro(p0,p1,p2,[(i+0.5),(j+0.5)]):
-                        gpu.GPU.draw_pixel([round(i), round(j)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)        
+                        if limite(i,j):
+                            gpu.GPU.draw_pixel([round(i), round(j)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)        
                             
                     i+=1
                 j+=1
@@ -286,7 +314,9 @@ class GL:
         i=0
         pontos =[]
         while i<len(vertices):
-            pontos.append([vertices[i],vertices[i+1]])
+            x = vertices[i]
+            y = vertices[i+1]
+            pontos.append([x,y])
             i+=2
         print(pontos)
         k = 0
