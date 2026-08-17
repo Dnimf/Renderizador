@@ -82,6 +82,7 @@ class GL:
 
         print("Polyline2D : lineSegments = {0}".format(lineSegments)) # imprime no terminal
         print("Polyline2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        print(len(lineSegments))
         def arredonda(v):
             delta = v-int(v)
             if delta>0.5:
@@ -96,7 +97,7 @@ class GL:
                 if p0[1]<p1[1]:
                     u = p0[1]
                     v=p0[0]
-                    while u<=p1[1]:
+                    while u<p1[1]:
                     # frame_buffer[round(v)][u] = 1
                         # print(v,int(v))
                         gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
@@ -117,7 +118,7 @@ class GL:
                 if p0[0]<=p1[0]:
                     u = p0[1]
                     v=p0[0]
-                    while v<=p1[0]:
+                    while v<p1[0]:
                     # frame_buffer[round(v)][u] = 1
                         # print(v,int(v))
                         gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
@@ -127,7 +128,7 @@ class GL:
                 if p0[0]>p1[0]:
                     u = p0[1]
                     v=p0[0]
-                    while v>=p1[0]:
+                    while v>p1[0]:
                     # frame_buffer[round(v)][u] = 1
                         gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
                         v-=1
@@ -143,24 +144,32 @@ class GL:
                         
                         v-=1
                 if p0[0]<p1[0]:
-                    while v<=p1[0]:
+                    while v<p1[0]:
                         # frame_buffer[v][u] = 1
                         gpu.GPU.draw_pixel([arredonda(u), arredonda(v)], gpu.GPU.RGB8, [r, g, b])
                         v+=1
         i = 0
+        pontos =[]
         while i<len(lineSegments):
-            # print("x:",lineSegments[i])
-            # print("y:",lineSegments[i+1])
             x_1 = lineSegments[i]
             y_1= lineSegments[i+1]
-            x_2 = lineSegments[i+2]
-            y_2= lineSegments[i+3]
+            pontos.append([y_1,x_1])
+            i+=2
+        j = 0
+        while j<len(pontos):
+            # print("x:",lineSegments[i])
+            # print("y:",lineSegments[i+1])
+            p1 = pontos[j]
+            if (j+1)==len(pontos):
+                p2 = pontos[0]
+            else:
+                p2 = pontos[j+1]
             r= 255 *cor[0]
             g=255*cor[1]
             b=255*cor[2]
             # gpu.GPU.draw_pixel([int(x), int(y)], gpu.GPU.RGB8, [r, g, b])
-            cria_linha([y_1,x_1],[y_2,x_2],r,g,b)
-            i+=4
+            cria_linha(p1,p2,r,g,b)
+            j+=1
         # Exemplo:
         # pos_x = GL.width//2
         # pos_y = GL.height//2
@@ -262,13 +271,13 @@ class GL:
             return [round(x_min),round(y_min),round(x_max),round(y_max)]
         def preenche_triangulo(p0,p1,p2, r, g, b):
             c = caixa(p0,p1,p2)
-            j = c[1]
+            j = (c[1])
             while j<=c[3]:
                 i = c[0]
                 while i<=c[2]:
                     # print(i,j)
                     # gpu.GPU.draw_pixel([int(i), int(j)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)        
-                    if esta_dentro(p0,p1,p2,[round(i),round(j)]):
+                    if esta_dentro(p0,p1,p2,[(i+0.5),(j+0.5)]):
                         gpu.GPU.draw_pixel([round(i), round(j)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)        
                             
                     i+=1
@@ -288,7 +297,7 @@ class GL:
         # gpu.GPU.draw_pixel([int(ponto__teste_2[0]), int(ponto__teste_2[1])], gpu.GPU.RGB8, [255, 255, 0])  # altera pixel (u, v, tipo, r, g, b)            
         # gpu.GPU.draw_pixel([int(ponto__teste_3[0]), int(ponto__teste_3[1])], gpu.GPU.RGB8, [255, 255, 0])  # altera pixel (u, v, tipo, r, g, b)            
             # Exemplo:
-        gpu.GPU.draw_pixel([6, 8], gpu.GPU.RGB8, [255, 255, 0])  # altera pixel (u, v, tipo, r, g, b)
+        # gpu.GPU.draw_pixel([6, 8], gpu.GPU.RGB8, [255, 255, 0])  # altera pixel (u, v, tipo, r, g, b)
 
 
     @staticmethod
