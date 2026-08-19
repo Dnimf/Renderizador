@@ -205,14 +205,41 @@ class GL:
         # um círculo.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o Circle2D
         # você pode assumir o desenho das linhas com a cor emissiva (emissiveColor).
-
+        def limite(p):
+            u = p[0]
+            v = p[1]
+            if u>=0:
+                if u< GL.width:
+                    if v>=0:
+                        if v<GL.height:
+                            return True
+            return False
         print("Circle2D : radius = {0}".format(radius)) # imprime no terminal
         print("Circle2D : colors = {0}".format(colors)) # imprime no terminal as cores
-        
+        x0 =0
+        y0 = 0
+        i = 0
+        cor = colors["emissiveColor"]
+        r = 255*cor[0]
+        g = 255*cor[1]
+        b = 255*cor[2]
+        pontos = []
+        while i< 2*math.pi:
+            x = x0+radius*math.cos(i)
+            y = y0+radius*math.sin(i)
+            pontos.append([x,y])
+            i+=0.05
+        print(pontos)
+        j = 0;
+        while j<len(pontos):
+            ponto = pontos[j]
+            if limite(ponto):
+                gpu.GPU.draw_pixel([round(ponto[0]), round(ponto[1])], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
+            j+=1
         # Exemplo:
         pos_x = GL.width//2
         pos_y = GL.height//2
-        gpu.GPU.draw_pixel([pos_x, pos_y], gpu.GPU.RGB8, [255, 0, 255])  # altera pixel (u, v, tipo, r, g, b)
+        # gpu.GPU.draw_pixel([pos_x, pos_y], gpu.GPU.RGB8, [255, 0, 255])  # altera pixel (u, v, tipo, r, g, b)
         # cuidado com as cores, o X3D especifica de (0,1) e o Framebuffer de (0,255)
 
 
