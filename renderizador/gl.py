@@ -23,7 +23,8 @@ class GL:
     height = 600  # altura da tela
     near = 0.01   # plano de corte próximo
     far = 1000    # plano de corte distante
-
+    matriz_projecao = []
+    matriz_transformacao = []
     @staticmethod
     def setup(width, height, near=0.01, far=1000):
         """Definr parametros para câmera de razão de aspecto, plano próximo e distante."""
@@ -379,8 +380,10 @@ class GL:
         print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
-        gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
-
+        i=10
+        while i<100:
+            gpu.GPU.draw_pixel([i, i], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
+            i+=1
     @staticmethod
     def viewpoint(position, orientation, fieldOfView):
         """Função usada para renderizar (na verdade coletar os dados) de Viewpoint."""
@@ -388,6 +391,18 @@ class GL:
         # câmera virtual. Use esses dados para poder calcular e criar a matriz de projeção
         # perspectiva para poder aplicar nos pontos dos objetos geométricos.
 
+        # a orientas;'ao provavlemente quer dizer port onde esta vendo e o quanto teria q rotacionar
+        
+        top = GL.near*np.tan(fieldOfView/2)
+        bottom = -top
+        right = top*(GL.width/GL.height)
+        left = -right
+        a = [(GL.near/right),0,0,0]
+        b = [0,(GL.near/top),0,0]
+        c = [0,0,-((GL.far+GL.near)/(GL.far-GL.near)),((-2*GL.far*GL.near)/(GL.far-GL.near))]
+        d = [0,0,-1,0]
+        matriz = [a,b,c,d]               
+        
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         print("Viewpoint : ", end='')
         print("position = {0} ".format(position), end='')
@@ -409,13 +424,55 @@ class GL:
         # Você precisará usar alguma estrutura de dados pilha para organizar as matrizes.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
+        print("Transformacao innnnnnnnn")
+        padrao = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+        def quartenion(rotation):
+            x = rotation[0]
+            y = rotation[1]
+            z = rotation[2]
+            theta = rotation[3]
+            qr = math.cos(theta/2)
+            qx = math.sin(theta/2)*x
+            qy = math.sin(theta/2)*y
+            qz = math.sin(theta/2)*z
+            a = 1-2*((qy**2)+qz**2)
+            b = 2*(qx*qy-qz*qr)
+            c = 2*(qx*qz+qy*qr)
+            d = 2*(qx*qy+qz*qr)
+            e = 1-2*((qx**2)+qz**2)
+            f = 2*(qy*qz-qx*qr)
+            g = 2*(qx*qz-qy*qr)
+            h = 2*(qy*qz+qx*qr)
+            i = 1-2*((qx**2)+qy**2)
+            return [[a,b,c,0],[d,e,f,0],[g,h,i,0],[0,0,0,1]]
+        def translacao(translation):
+            l1= [1,0,0,translation[0]]
+            l2= [0,1,0,translation[1]]
+            l3= [0,0,1,translation[2]]
+            l4= [0,0,0,1]
+            return [l1,l2,l3,l4]
+        def escala(scale):
+            x=[scale[0],0,0,0]
+            y = [0,scale[1],0,0]
+            z=[0,0,scale[2],0]
+            w=[0,0,0,1]
+            return [x,y,z,w]
         print("Transform : ", end='')
-        if translation:
-            print("translation = {0} ".format(translation), end='') # imprime no terminal
         if scale:
             print("scale = {0} ".format(scale), end='') # imprime no terminal
+            s=escala(scale)
+            padrao = np.matmul(s,padrao)
         if rotation:
-            print("rotation = {0} ".format(rotation), end='') # imprime no terminal
+            print("rotation = {0} ".format(rotation), end='')
+            q =  quartenion(rotation)# imprime no terminal
+            padrao =np.matmul(q,padrao)
+        if translation:
+            print("translation = {0} ".format(translation), end='') # imprime no terminal
+            t= translacao(translation)
+            padrao = np.matmul(t,padrao)
+        GL.matriz_transformacao = padrao
+        return padrao
+            
         print("")
 
     @staticmethod
