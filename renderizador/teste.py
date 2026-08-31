@@ -1,13 +1,13 @@
 import gl 
 import numpy as np    
 import math# Recupera rotinas de suporte ao X3D
-ponto = [0,0,1,1]
-rotation = [0,1,0,math.pi/2]
-escala = [0,1,2]
-translation = [0,1,1]
+ponto = [0.0, -4.0, 0.0, 1]
+rotation = [-1, 0,0,math.pi]
+escala = [1,1,1]
+translation = [0,0,5]
 print(ponto)
 # q = gl.GL.transform_in(0,0,rotation)
-q = gl.GL.transform_in(translation,0,rotation)
+q = gl.GL.transform_in(translation,escala,rotation)
 
 
 a =(np.matmul(q,ponto))

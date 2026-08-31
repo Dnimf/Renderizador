@@ -24,7 +24,8 @@ class GL:
     near = 0.01   # plano de corte próximo
     far = 1000    # plano de corte distante
     matriz_projecao = []
-    matriz_transformacao = []
+    matriz_transformacao = np.identity(4)
+    matriz_camera =[]
     @staticmethod
     def setup(width, height, near=0.01, far=1000):
         """Definr parametros para câmera de razão de aspecto, plano próximo e distante."""
@@ -376,21 +377,80 @@ class GL:
         # tipos de cores.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
+        ajuste = np.array([[(GL.width/2),0,0,(GL.width/2)],[0,-(GL.height/2),0,(GL.height/2)],[0,0,1,0],[0,0,0,1]])
         print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
         print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
-
+        pontos = []
+        pontos_transformados = []
+        i = 2
+        while i<len(point):
+            pontos.append([point[i-2],point[i-1],point[i],1])
+            i+=3
+        print(f"pontos{pontos}\n")
+        # print(f"matriztrot {GL.matriz_transformacao}")
+        for j in pontos:
+            transf = np.matmul(GL.matriz_transformacao,j)
+            camera = np.matmul(GL.matriz_camera,transf)
+            proj = np.matmul(GL.matriz_projecao,camera)
+            proj[0] /= proj[3]
+            proj[1] /= proj[3]
+            proj[2] /= proj[3]
+            proj[3] /= proj[3]
+            ajust = np.matmul(ajuste,proj)
+            pontos_transformados.append(ajust)
+        print(f"pontos transformados {pontos_transformados}")
+        result = []
+        for i in pontos_transformados:
+            result.append(i[0])
+            result.append(i[1])
+        GL.triangleSet2D(result,colors)
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
-        i=10
-        while i<100:
-            gpu.GPU.draw_pixel([i, i], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
-            i+=1
+        # for i in pontos_transformados:
+        #     # print(f"a {int(i[0]), int(i[1])}")
+        #     gpu.GPU.draw_pixel([int(i[0]), int(i[1])], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
     @staticmethod
     def viewpoint(position, orientation, fieldOfView):
         """Função usada para renderizar (na verdade coletar os dados) de Viewpoint."""
         # Na função de viewpoint você receberá a posição, orientação e campo de visão da
         # câmera virtual. Use esses dados para poder calcular e criar a matriz de projeção
         # perspectiva para poder aplicar nos pontos dos objetos geométricos.
-
+        def quartenion(rotation):
+            x = rotation[0]
+            y = rotation[1]
+            z = rotation[2]
+            theta = rotation[3]
+            qr = math.cos(theta/2)
+            qx = math.sin(theta/2)*x
+            qy = math.sin(theta/2)*y
+            qz = math.sin(theta/2)*z
+            a = 1-2*((qy**2)+qz**2)
+            b = 2*(qx*qy-qz*qr)
+            c = 2*(qx*qz+qy*qr)
+            d = 2*(qx*qy+qz*qr)
+            e = 1-2*((qx**2)+qz**2)
+            f = 2*(qy*qz-qx*qr)
+            g = 2*(qx*qz-qy*qr)
+            h = 2*(qy*qz+qx*qr)
+            i = 1-2*((qx**2)+qy**2)
+            return [[a,b,c,0],[d,e,f,0],[g,h,i,0],[0,0,0,1]]
+        def translacao(translation):
+            l1= [1,0,0,translation[0]]
+            l2= [0,1,0,translation[1]]
+            l3= [0,0,1,translation[2]]
+            l4= [0,0,0,1]
+            return [l1,l2,l3,l4]
+        def escala(scale):
+            x=[scale[0],0,0,0]
+            y = [0,scale[1],0,0]
+            z=[0,0,scale[2],0]
+            w=[0,0,0,1]
+            return [x,y,z,w]
+        
+        rotacion = quartenion(orientation)
+        trans = translacao(position)
+        rotacion_inv = np.linalg.inv(rotacion)
+        trans_inv = np.linalg.inv(trans)
+        GL.matriz_camera = rotacion_inv@trans_inv
         # a orientas;'ao provavlemente quer dizer port onde esta vendo e o quanto teria q rotacionar
         
         top = GL.near*np.tan(fieldOfView/2)
@@ -402,6 +462,8 @@ class GL:
         c = [0,0,-((GL.far+GL.near)/(GL.far-GL.near)),((-2*GL.far*GL.near)/(GL.far-GL.near))]
         d = [0,0,-1,0]
         matriz = [a,b,c,d]               
+        GL.matriz_projecao = matriz
+        
         
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         print("Viewpoint : ", end='')
@@ -470,8 +532,10 @@ class GL:
             print("translation = {0} ".format(translation), end='') # imprime no terminal
             t= translacao(translation)
             padrao = np.matmul(t,padrao)
+        # print(padrao)
         GL.matriz_transformacao = padrao
-        return padrao
+        print(GL.matriz_transformacao)
+        # return padrao
             
         print("")
 
