@@ -52,8 +52,8 @@ class GL:
         cor =colors["emissiveColor"]
         i = 0
         while i<len(point):
-            print("x:",point[i])
-            print("y:",point[i+1])
+            # print("x:",point[i])
+            # print("y:",point[i+1])
             x = point[i]
             y= point[i+1]
             r= 255 *cor[0]
@@ -165,8 +165,8 @@ class GL:
                     i+=1                   
         cor =colors["emissiveColor"]
 
-        print("Polyline2D : lineSegments = {0}".format(lineSegments)) # imprime no terminal
-        print("Polyline2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        # print("Polyline2D : lineSegments = {0}".format(lineSegments)) # imprime no terminal
+        # print("Polyline2D : colors = {0}".format(colors)) # imprime no terminal as cores
         print(len(lineSegments))
         i =0 
         pontos = []
@@ -176,7 +176,7 @@ class GL:
         while i<len(lineSegments):
             x = lineSegments[i]
             y = lineSegments[i+1]
-            print("x",x,"y",y,GL.width,GL.height)
+            # print("x",x,"y",y,GL.width,GL.height)
             # if x>0:
             #     if y>0:
             #         if x<GL.width:
@@ -216,8 +216,8 @@ class GL:
                         if v<GL.height:
                             return True
             return False
-        print("Circle2D : radius = {0}".format(radius)) # imprime no terminal
-        print("Circle2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        # print("Circle2D : radius = {0}".format(radius)) # imprime no terminal
+        # print("Circle2D : colors = {0}".format(colors)) # imprime no terminal as cores
         x0 =0
         y0 = 0
         i = 0
@@ -231,7 +231,7 @@ class GL:
             y = y0+radius*math.sin(i)
             pontos.append([x,y])
             i+=0.05
-        print(pontos)
+        # print(pontos)
         j = 0;
         while j<len(pontos):
             ponto = pontos[j]
@@ -256,8 +256,8 @@ class GL:
         # quantidade de pontos é sempre multiplo de 3, ou seja, 6 valores ou 12 valores, etc.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o TriangleSet2D
         # você pode assumir inicialmente o desenho das linhas com a cor emissiva (emissiveColor).
-        print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
-        print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        # print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
+        # print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
         def limite(u,v):
             if u>=0:
                 if u< GL.width:
@@ -269,7 +269,7 @@ class GL:
         r=225*cor[0]
         g=255*cor[1]
         b=255*cor[2]
-        print(r,g,b)
+        # print(r,g,b)
         def cria_aresta(p,pp):
             return [pp[0]-p[0],pp[1]-p[1]]
         def verifica_individual(a,n):
@@ -339,7 +339,7 @@ class GL:
                             
                     i+=1
                 j+=1
-            print(c)
+            # print(c)
         i=0
         pontos =[]
         while i<len(vertices):
@@ -347,7 +347,7 @@ class GL:
             y = vertices[i+1]
             pontos.append([x,y])
             i+=2
-        print(pontos)
+        # print(pontos)
         k = 0
         while k<len(pontos):
             preenche_triangulo(pontos[k],pontos[k+1], pontos[k+2],r , g, b)
@@ -378,15 +378,15 @@ class GL:
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         ajuste = np.array([[(GL.width/2),0,0,(GL.width/2)],[0,-(GL.height/2),0,(GL.height/2)],[0,0,1,0],[0,0,0,1]])
-        print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
-        print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
+        # print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
+        # print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
         pontos = []
         pontos_transformados = []
         i = 2
         while i<len(point):
             pontos.append([point[i-2],point[i-1],point[i],1])
             i+=3
-        print(f"pontos{pontos}\n")
+        # print(f"pontos{pontos}\n")
         # print(f"matriztrot {GL.matriz_transformacao}")
         for j in pontos:
             transf = np.matmul(GL.matriz_transformacao,j)
@@ -398,7 +398,7 @@ class GL:
             proj[3] /= proj[3]
             ajust = np.matmul(ajuste,proj)
             pontos_transformados.append(ajust)
-        print(f"pontos transformados {pontos_transformados}")
+        # print(f"pontos transformados {pontos_transformados}")
         result = []
         for i in pontos_transformados:
             result.append(i[0])
@@ -466,10 +466,10 @@ class GL:
         
         
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("Viewpoint : ", end='')
-        print("position = {0} ".format(position), end='')
-        print("orientation = {0} ".format(orientation), end='')
-        print("fieldOfView = {0} ".format(fieldOfView))
+        # print("Viewpoint : ", end='')
+        # print("position = {0} ".format(position), end='')
+        # print("orientation = {0} ".format(orientation), end='')
+        # print("fieldOfView = {0} ".format(fieldOfView))
 
     @staticmethod
     def transform_in(translation, scale, rotation):
@@ -566,14 +566,33 @@ class GL:
         # todos no sentido horário ou todos no sentido anti-horário, conforme especificado.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("TriangleStripSet : pontos = {0} ".format(point), end='')
+        pontos =[]
+        triangulos = []
+        # print("TriangleStripSet : pontos = {0} ".format(point), end='')
         for i, strip in enumerate(stripCount):
             print("strip[{0}] = {1} ".format(i, strip), end='')
         print("")
-        print("TriangleStripSet : colors = {0}".format(colors)) # imprime no terminal as cores
-
+        # print("TriangleStripSet : colors = {0}".format(colors)) # imprime no terminal as cores
+        i = 0;
+        while i<(len(point)-2):
+            pontos.append([point[i],point[i+1],point[i+2]])
+            i+=3
+        j = 0
+        vira =0
+        while j<(len(pontos)-2):
+            p1 = pontos[j]
+            p2 = pontos[j+1]
+            p3 = pontos[j+2]
+            if vira:
+                triangulos.append([p1[0],p1[1],p1[2],p3[0],p3[1],p3[2],p2[0],p2[1],p2[2]])
+                vira =0
+            else:
+                triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
+                vira = 1
+            j+=1
+        for k in triangulos:
+            GL.triangleSet(k,colors)
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
-        gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
 
     @staticmethod
     def indexedTriangleStripSet(point, index, colors):
@@ -590,13 +609,38 @@ class GL:
         # primeiro triângulo será com os vértices 0, 1 e 2, depois serão os vértices 1, 2 e 3,
         # depois 2, 3 e 4, e assim por diante. Cuidado com a orientação dos vértices, ou seja,
         # todos no sentido horário ou todos no sentido anti-horário, conforme especificado.
-
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         print("IndexedTriangleStripSet : pontos = {0}, index = {1}".format(point, index))
         print("IndexedTriangleStripSet : colors = {0}".format(colors)) # imprime as cores
-
+        print("----------------------------------\n\n\n\n")
+        pontos =[]
+        i = 0;
+        while i<(len(point)-2):
+            pontos.append([point[i],point[i+1],point[i+2]])
+            i+=3
+        print(f"pontos : {pontos}")
+        j =0
+        vira = 0
+        triangulos = []
+        while j<(len(index)-2):
+            if index[j+2] == -1:
+                for k in triangulos:
+                    GL.triangleSet(k,colors)
+                vira =0
+                triangulos =[]
+            p1 = pontos[index[j]]
+            p2 = pontos[index[j+1]]
+            p3 = pontos[index[j+2]]
+            if vira:
+                triangulos.append([p1[0],p1[1],p1[2],p3[0],p3[1],p3[2],p2[0],p2[1],p2[2]])
+                vira =0
+            else:
+                triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
+                vira = 1
+            j+=1
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
         gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
+        print("----------------------------------\n\n\n\n")
 
     @staticmethod
     def indexedFaceSet(coord, coordIndex, colorPerVertex, color, colorIndex,
