@@ -65,14 +65,14 @@ class Renderizador:
         )
 
         # Descomente as seguintes linhas se for usar um Framebuffer para profundidade
-        # gpu.GPU.framebuffer_storage(
-        #     self.framebuffers["FRONT"],
-        #     gpu.GPU.DEPTH_ATTACHMENT,
-        #     gpu.GPU.DEPTH_COMPONENT32F,
-        #     self.width,
-        #     self.height
-        # )
-    
+        gpu.GPU.framebuffer_storage(
+            self.framebuffers["FRONT"],
+            gpu.GPU.DEPTH_ATTACHMENT,
+            gpu.GPU.DEPTH_COMPONENT32F,
+            self.width,
+            self.height
+        )
+        
         # Opções:
         # - COLOR_ATTACHMENT: alocações para as cores da imagem renderizada
         # - DEPTH_ATTACHMENT: alocações para as profundidades da imagem renderizada
@@ -89,7 +89,7 @@ class Renderizador:
 
         # Define a profundidade que ira apagar o FrameBuffer quando clear_buffer() invocado
         # Assuma 1.0 o mais afastado e -1.0 o mais próximo da camera
-        gpu.GPU.clear_depth(1.0)
+        gpu.GPU.clear_depth(3000.0)
 
         # Definindo tamanho do Viewport para renderização
         self.scene.viewport(width=self.width, height=self.height)

@@ -26,6 +26,8 @@ class GL:
     matriz_projecao = []
     matriz_transformacao = [np.identity(4)]
     matriz_camera =[]
+    image_texture = []
+    posicao_global = 1
     @staticmethod
     def setup(width, height, near=0.01, far=1000):
         """Definr parametros para câmera de razão de aspecto, plano próximo e distante."""
@@ -246,7 +248,8 @@ class GL:
 
 
     @staticmethod
-    def triangleSet2D(vertices, colors):
+    def triangleSet2D(vertices,colors, coordIndex, colorPerVertex, color, colorIndex='',
+                       texCoord='', texCoordIndex='', current_texture='', z_s='', z_norm=''):
         """Função usada para renderizar TriangleSet2D."""
         # https://www.web3d.org/specifications/X3Dv4/ISO-IEC19775-1v4-IS/Part01/components/geometry2D.html#TriangleSet2D
         # Nessa função você receberá os vertices de um triângulo no parâmetro vertices,
@@ -256,8 +259,17 @@ class GL:
         # quantidade de pontos é sempre multiplo de 3, ou seja, 6 valores ou 12 valores, etc.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o TriangleSet2D
         # você pode assumir inicialmente o desenho das linhas com a cor emissiva (emissiveColor).
-        # print("TriangleSet2D : vertices = {0}".format(vertices)) # imprime no terminal
-        # print("TriangleSet2D : colors = {0}".format(colors)) # imprime no terminal as cores
+        # image_texture = gpu.GPU.load_texture(current_texture[0])
+        # print (image_texture)
+        # print(z_s)
+        print(f"colors {colors}")
+        print(f"colorspv {colorPerVertex}")
+        print(f"color {color}")
+        print(f"verticces {vertices}")
+        # const = 255
+        # if current_texture:
+        #     const = 1
+        
         def limite(u,v):
             if u>=0:
                 if u< GL.width:
@@ -266,10 +278,91 @@ class GL:
                             return True
             return False
         cor = colors["emissiveColor"]
-        r=225*cor[0]
-        g=255*cor[1]
-        b=255*cor[2]
-        # print(r,g,b)
+        transp = colors["transparency"]
+        cor1 = color
+        r=cor[0]
+        g=cor[1]
+        b=cor[2]
+        if not current_texture:
+            r*=255
+            g*=255
+            b*=255
+            print(r,g,b)
+        r_1 = r
+        g_1 = g
+        b_1 = b
+        cont = 0
+        prof = True
+        def verifica_profundidade(Z_norm,p):
+            nonlocal r,g,b, prof , r_1, g_1, b_1
+            x = p[0]-0.5
+            y = p[1]-0.5
+            # print(x,y)
+            profundidade = gpu.GPU.read_pixel([int(x), int(y)], gpu.GPU.DEPTH_COMPONENT32F)
+            cor = gpu.GPU.read_pixel([int(x), int(y)], gpu.GPU.RGBA8)
+            # print(cor)
+            r_a = cor[0]*transp
+            g_a = cor[1]*transp
+            b_a = cor[2]*transp
+            if(Z_norm<profundidade):
+                r=r_a+(r_1*(1-transp))
+                g=g_a+(g_1*(1-transp))
+                b=b_a+(b_1*(1-transp))
+                gpu.GPU.draw_pixel([int(x), int(y)],gpu.GPU.DEPTH_COMPONENT32F ,[Z_norm])
+                return True
+            return False
+        def verifica_cor_textura(alfa,beta,gama,z,Z_norm,p):
+            nonlocal r,g,b
+            # print(f"textcoord :{texCoord}")
+            # print(f"textcorordindex :{texCoordIndex}")
+            u_0 = texCoord[0][0]
+            v_0 = texCoord[0][1]
+            u_1 = texCoord[1][0]
+            v_1 = texCoord[1][1]
+            u_2 = texCoord[2][0]
+            v_2 = texCoord[2][1]
+            # print(len(GL.image_texture[0]),len(GL.image_texture))
+            u = ((alfa*(u_0/z_s[0])) + (beta*(u_1/z_s[1])) +(gama*(u_2/z_s[2])))/z                        
+            v = ((alfa*(v_0/z_s[0])) + (beta*(v_1/z_s[1])) +(gama*(v_2/z_s[2])))/z
+            u_f = (len(GL.image_texture[0])-1)*u                     
+            v_f = (len(GL.image_texture)-1)*v
+            if u_f>255:
+                u_f =255
+            if v_f>255:
+                v_f =255
+            if u_f<0:
+                u_f =0
+            if v_f<0:
+                v_f = 0
+            # print(u,v)
+            # print(u_f,v_f)
+            cor = GL.image_texture[math.floor(u_f),(255-math.floor(v_f))]
+            r = cor[0]                     
+            g = cor[1]                     
+            b = cor[2]                     
+        def verifica_cor(alfa,beta,gama,cores,Z,Z_norm,p):
+            nonlocal r,g,b
+            c1 = cores[0]
+            c2 = cores[1]
+            c3 = cores[2]
+            r_1_1 = alfa*(255*c1[0]/z_s[0])
+            r_1_2 = beta*(255*c2[0]/z_s[1])            
+            r_1_3 = gama*(255*c3[0]/z_s[2])
+            r_1 = (r_1_1+r_1_2+ r_1_3)/Z
+            
+            g_1_1 = alfa*(255*c1[1]/z_s[0])
+            g_1_2 = beta*(255*c2[1]/z_s[1])            
+            g_1_3 = gama*(255*c3[1]/z_s[2])
+            g_1 = (g_1_1+g_1_2+ g_1_3)/Z
+            
+            b_1_1 = alfa*(255*c1[2]/z_s[0])
+            b_1_2 = beta*(255*c2[2]/z_s[1])            
+            b_1_3 = gama*(255*c3[2]/z_s[2])
+            b_1 = (b_1_1+b_1_2+ b_1_3)/Z
+            r = abs(r_1)
+            g = abs(g_1)
+            b = abs(b_1)
+            # print(255*r,255*g,255*b)
         def cria_aresta(p,pp):
             return [pp[0]-p[0],pp[1]-p[1]]
         def verifica_individual(a,n):
@@ -279,21 +372,39 @@ class GL:
             b_y = a[1]
             return (a_x*b_y)-(a_y*b_x)
         def esta_dentro(p0,p1,p2, p):
-            a0 = cria_aresta(p0,p1);
-            a1 = cria_aresta(p1,p2);
-            a2 = cria_aresta(p2,p0);
+            nonlocal cont
+            a0 = cria_aresta(p0,p1); # (bx-ax)(by-ay)
+            a1 = cria_aresta(p1,p2); # (cx-bx)(cy-by)
+            a2 = cria_aresta(p2,p0); # (ax-cx)(ay-cy)
 
-            n0 =cria_aresta(p0,p)
-            n1 =cria_aresta(p1,p)
-            n2 =cria_aresta(p2,p)
+            n0 =cria_aresta(p0,p) # (px-ax)(py-ay)
+            n1 =cria_aresta(p1,p) # (px-bx)(py-by)
+            n2 =cria_aresta(p2,p) # (px-cx)(py-cy)
             sera = verifica_individual(a0,n0)
             sera1 = verifica_individual(a1,n1)
             sera2 = verifica_individual(a2,n2)
-            # print(sera,sera1,sera2)
+            xa_xb = cria_aresta(p1,p0)
+            alpha1 = -(n1[0]*a1[1]) + (n1[1]*a1[0])
+            alpha2 = -(xa_xb[0]*a1[1])+ (xa_xb[1]*a1[0])
+            b_c = cria_aresta(p2,p1)
+            beta1 = -(n2[0]*a2[1])+(n2[1]*a2[0])
+            beta2 = -(b_c[0]*a2[1])+(b_c[1]*a2[0])
+            alpha = alpha1/alpha2
+            beta= beta1/beta2
+            gama = 1-alpha-beta
+            Z = (alpha/z_s[0] + beta/z_s[1]+ gama/z_s[2])
+            Z_norm = 1/(alpha/z_norm[0] + beta/z_norm[1]+ gama/z_norm[2])
+            if color:
+                verifica_cor(alpha,beta,gama,cor1,Z,Z_norm,p)
+                cont+=1
+            elif current_texture:
+                verifica_cor_textura(alpha,beta,gama,Z,Z_norm,p)
+
             if sera>=0:
                 if sera1>=0: 
                     if sera2>=0:
-                        return True    
+                        if verifica_profundidade(Z_norm,p):
+                            return True    
             return False
         def caixa(p0,p1,p2):
             x_min = 255
@@ -325,7 +436,7 @@ class GL:
             if p2[1] >y_max:
                 y_max = p2[1]
             return [round(x_min),round(y_min),round(x_max),round(y_max)]
-        def preenche_triangulo(p0,p1,p2, r, g, b):
+        def preenche_triangulo(p0,p1,p2):
             c = caixa(p0,p1,p2)
             j = (c[1])
             while j<=c[3]:
@@ -333,9 +444,11 @@ class GL:
                 while i<=c[2]:
                     # print(i,j)
                     # gpu.GPU.draw_pixel([int(i), int(j)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)        
-                    if esta_dentro(p0,p1,p2,[(i+0.5),(j+0.5)]):
-                        if limite(i,j):
-                            gpu.GPU.draw_pixel([round(i), round(j)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)        
+                    if limite(i,j):
+
+                        if esta_dentro(p0,p1,p2,[(i+0.5),(j+0.5)]):
+                            if prof:
+                                gpu.GPU.draw_pixel([round(i), round(j)], gpu.GPU.RGB8, [round(r), round(g), round(b)])  # altera pixel (u, v, tipo, r, g, b)        
                             
                     i+=1
                 j+=1
@@ -350,7 +463,7 @@ class GL:
         # print(pontos)
         k = 0
         while k<len(pontos):
-            preenche_triangulo(pontos[k],pontos[k+1], pontos[k+2],r , g, b)
+            preenche_triangulo(pontos[k],pontos[k+1], pontos[k+2])
             k+=3
         # gpu.GPU.draw_pixel([int(ponto__teste_1[0]), int(ponto__teste_1[1])], gpu.GPU.RGB8, [255, 255, 0])  # altera pixel (u, v, tipo, r, g, b)            
         # gpu.GPU.draw_pixel([int(ponto__teste_2[0]), int(ponto__teste_2[1])], gpu.GPU.RGB8, [255, 255, 0])  # altera pixel (u, v, tipo, r, g, b)            
@@ -360,7 +473,8 @@ class GL:
 
 
     @staticmethod
-    def triangleSet(point, colors):
+    def triangleSet(point,colors, coordIndex='', colorPerVertex='', color='', colorIndex='',
+                       texCoord='', texCoordIndex='', current_texture=''):
         """Função usada para renderizar TriangleSet."""
         # https://www.web3d.org/specifications/X3Dv4/ISO-IEC19775-1v4-IS/Part01/components/rendering.html#TriangleSet
         # Nessa função você receberá pontos no parâmetro point, esses pontos são uma lista
@@ -387,15 +501,20 @@ class GL:
             pontos.append([point[i-2],point[i-1],point[i],1])
             i+=3
         # print(f"pontos{pontos}\n")
+        z=[]
+        z_norm = []    
         # print(f"matriztrot {GL.matriz_transformacao}")
         for j in pontos:
             transf = np.matmul(GL.matriz_transformacao[-1],j)
             camera = np.matmul(GL.matriz_camera,transf)
+            z.append(camera[2]/camera[3])
             proj = np.matmul(GL.matriz_projecao,camera)
             proj[0] /= proj[3]
             proj[1] /= proj[3]
             proj[2] /= proj[3]
             proj[3] /= proj[3]
+            
+            z_norm.append(proj[2])
             ajust = np.matmul(ajuste,proj)
             pontos_transformados.append(ajust)
         # print(f"pontos transformados {pontos_transformados}")
@@ -403,7 +522,10 @@ class GL:
         for i in pontos_transformados:
             result.append(i[0])
             result.append(i[1])
-        GL.triangleSet2D(result,colors)
+            # z.append(i[2])
+        print(f"vertices og{result}")
+        GL.triangleSet2D(result,colors, coordIndex, colorPerVertex, color, colorIndex,
+                       texCoord, texCoordIndex, current_texture, z, z_norm)
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
         # for i in pontos_transformados:
         #     # print(f"a {int(i[0]), int(i[1])}")
@@ -414,6 +536,7 @@ class GL:
         # Na função de viewpoint você receberá a posição, orientação e campo de visão da
         # câmera virtual. Use esses dados para poder calcular e criar a matriz de projeção
         # perspectiva para poder aplicar nos pontos dos objetos geométricos.
+        # print(position)
         def quartenion(rotation):
             x = rotation[0]
             y = rotation[1]
@@ -446,6 +569,8 @@ class GL:
             w=[0,0,0,1]
             return [x,y,z,w]
         
+        GL.posicao_global = position[2]
+        
         rotacion = quartenion(orientation)
         trans = translacao(position)
         rotacion_inv = np.linalg.inv(rotacion)
@@ -463,7 +588,7 @@ class GL:
         d = [0,0,-1,0]
         matriz = [a,b,c,d]               
         GL.matriz_projecao = matriz
-        
+        print(f"testa profundidade: {gpu.GPU.read_pixel([0, 0], gpu.GPU.DEPTH_COMPONENT32F)}")
         
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         # print("Viewpoint : ", end='')
@@ -519,17 +644,17 @@ class GL:
             z=[0,0,scale[2],0]
             w=[0,0,0,1]
             return [x,y,z,w]
-        print("Transform : ", end='')
+        # print("Transform : ", end='')
         if scale:
-            print("scale = {0} ".format(scale), end='') # imprime no terminal
+            # print("scale = {0} ".format(scale), end='') # imprime no terminal
             s=escala(scale)
             padrao = np.matmul(s,padrao)
         if rotation:
-            print("rotation = {0} ".format(rotation), end='')
+            # print("rotation = {0} ".format(rotation), end='')
             q =  quartenion(rotation)# imprime no terminal
             padrao =np.matmul(q,padrao)
         if translation:
-            print("translation = {0} ".format(translation), end='') # imprime no terminal
+            # print("translation = {0} ".format(translation), end='') # imprime no terminal
             t= translacao(translation)
             padrao = np.matmul(t,padrao)
         # print(padrao)
@@ -638,6 +763,7 @@ class GL:
         # print("IndexedTriangleStripSet : colors = {0}".format(colors)) # imprime as cores
         # print("----------------------------------\n\n\n\n")
         pontos =[]
+        
         # x=0.0
         i = 0;
         while i<(len(point)-2):
@@ -693,8 +819,9 @@ class GL:
         # textura para o poligono, para isso, use as coordenadas de textura e depois aplique a
         # cor da textura conforme a posição do mapeamento. Dentro da classe GPU já está
         # implementadado um método para a leitura de imagens.
-
         # Os prints abaixo são só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
+        print(f"face: {coord}")
+        print(f"colors asjhsdxtcyvubinoim{colors}")
         i = 0
         pontos =[]
         while i<(len(coord)-2):
@@ -709,24 +836,111 @@ class GL:
             else:
                 temp.append(j)
         # print(f"listas: {listas}")
-        for i in listas:
-            t = 2
-            triangulos = []
-            vira = 0
-            while t<len(i):
-                p1 = pontos[i[0]]
-                p2 = pontos[i[t-1]]
-                p3= pontos[i[t]]
-                # if vira:
-                #     triangulos.append([p1[0],p1[1],p1[2],p3[0],p3[1],p3[2],p2[0],p2[1],p2[2]])
-                #     vira = 0
-                # else:  
-                triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
-                    # vira = 1
-                t+=1
-            for k in triangulos:
-                # print(f"triangulos {k}\n")
-                GL.triangleSet(k,colors)         
+        rgb = []
+        c=2
+        if not current_texture and not color:
+            for i in range(len(listas)):
+                t = 2
+                triangulos = []
+                vira = 0
+                while t<len(listas[i]):
+                    i1 = listas[i]
+                    p1 = pontos[i1[0]]
+                    p2 = pontos[i1[t-1]]
+                    p3= pontos[i1[t]]
+                    # if vira:
+                    #     triangulos.append([p1[0],p1[1],p1[2],p3[0],p3[1],p3[2],p2[0],p2[1],p2[2]])
+                    #     vira = 0
+                    # else:  
+                    triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
+                        # vira = 1
+                    t+=1
+                    for k in range(len(triangulos)):
+                        if colorPerVertex:
+                        # print(f"triangulos {k}\n")
+                            GL.triangleSet(triangulos[k],colors, coordIndex, colorPerVertex, color, colorIndex,
+                                texCoord, texCoordIndex, current_texture)                 
+        if not current_texture and color:
+            while c<len(color):
+                rgb.append([color[c-2],color[c-1],color[c]])
+                c+=3
+                
+            coresId =[]
+            if colorPerVertex:
+                temp =[]
+                for j in colorIndex:
+                    if j == -1:
+                        coresId.append(temp)
+                        temp = []
+                    else:
+                        temp.append(j)
+                cores = []
+                for i in coresId:
+                    cores.append([rgb[i[0]], rgb[i[1]], rgb[i[2]]])    
+
+            for i in range(len(listas)):
+                t = 2
+                triangulos = []
+                vira = 0
+                while t<len(listas[i]):
+                    i1 = listas[i]
+                    p1 = pontos[i1[0]]
+                    p2 = pontos[i1[t-1]]
+                    p3= pontos[i1[t]]
+                    # if vira:
+                    #     triangulos.append([p1[0],p1[1],p1[2],p3[0],p3[1],p3[2],p2[0],p2[1],p2[2]])
+                    #     vira = 0
+                    # else:  
+                    triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
+                        # vira = 1
+                    t+=1
+                    for k in range(len(triangulos)):
+                        if colorPerVertex:
+                        # print(f"triangulos {k}\n")
+                            GL.triangleSet(triangulos[k],colors, coordIndex, colorPerVertex, cores[i], colorIndex,
+                                texCoord, texCoordIndex, current_texture)         
+        if current_texture:
+            GL.image_texture = gpu.GPU.load_texture(current_texture[0])
+            print(f"textcoord{texCoord}")
+            print(f"textcoord index{texCoordIndex}")
+            textura = []
+            c =1        
+            while c<len(texCoord):
+                textura.append([texCoord[c-1],texCoord[c]])
+                c+=2
+            temp =[]
+            textid = []
+            for j in texCoordIndex:
+                if j == -1:
+                    textid.append(temp)
+                    temp = []
+                else:
+                    temp.append(j)
+            tex = []
+            print(textid)
+            print(textura)
+            for i in textid:
+                tex.append([textura[i[0]], textura[i[1]], textura[i[2]]])             
+            for i in range(len(listas)):
+                t = 2
+                triangulos = []
+                vira = 0
+                while t<len(listas[i]):
+                    i1 = listas[i]
+                    p1 = pontos[i1[0]]
+                    p2 = pontos[i1[t-1]]
+                    p3= pontos[i1[t]]
+                    # if vira:
+                    #     triangulos.append([p1[0],p1[1],p1[2],p3[0],p3[1],p3[2],p2[0],p2[1],p2[2]])
+                    #     vira = 0
+                    # else:  
+                    triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
+                        # vira = 1
+                    t+=1
+                    for k in range(len(triangulos)):
+                        # print(f"triangulos {k}\n")
+                        GL.triangleSet(triangulos[k],colors, coordIndex, colorPerVertex, color, colorIndex,
+                            tex[i], texCoordIndex, 1)           
         # print("------------------------\n\n\n\n\n\n\n\n\n\n\n\n")   
         # print("IndexedFaceSet : ")
         # if coord:
