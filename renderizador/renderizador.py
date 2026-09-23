@@ -19,7 +19,7 @@ import gpu          # Simula os recursos de uma GPU
 
 import x3d          # Faz a leitura do arquivo X3D, gera o grafo de cena e faz traversal
 import scenegraph   # Imprime o grafo de cena no console
-
+import numpy as np
 LARGURA = 60  # Valor padrão para largura da tela
 ALTURA = 40   # Valor padrão para altura da tela
 
@@ -41,13 +41,16 @@ class Renderizador:
         # Configurando color buffers para exibição na tela
 
         # Cria uma (1) posição de FrameBuffer na GPU
-        fbo = gpu.GPU.gen_framebuffers(1)
+        fbo = gpu.GPU.gen_framebuffers(2)
 
         # Define o atributo FRONT como o FrameBuffe principal
         self.framebuffers["FRONT"] = fbo[0]
+        self.framebuffers["BACK"] = fbo[1]
 
         # Define que a posição criada será usada para desenho e leitura
-        gpu.GPU.bind_framebuffer(gpu.GPU.FRAMEBUFFER, self.framebuffers["FRONT"])
+        # gpu.GPU.bind_framebuffer(gpu.GPU.FRAMEBUFFER, self.framebuffers["FRONT"])
+        gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["FRONT"])
+        gpu.GPU.bind_framebuffer(gpu.GPU.DRAW_FRAMEBUFFER, self.framebuffers["BACK"])
         # Opções:
         # - DRAW_FRAMEBUFFER: Faz o bind só para escrever no framebuffer
         # - READ_FRAMEBUFFER: Faz o bind só para leitura no framebuffer
@@ -63,6 +66,14 @@ class Renderizador:
             self.width,
             self.height
         )
+        
+        gpu.GPU.framebuffer_storage(
+            self.framebuffers["BACK"],
+            gpu.GPU.COLOR_ATTACHMENT,
+            gpu.GPU.RGB8,
+            2*self.width,
+            2*self.height
+        )
 
         # Descomente as seguintes linhas se for usar um Framebuffer para profundidade
         gpu.GPU.framebuffer_storage(
@@ -72,7 +83,14 @@ class Renderizador:
             self.width,
             self.height
         )
-        
+        gpu.GPU.framebuffer_storage(
+            self.framebuffers["BACK"],
+            gpu.GPU.DEPTH_ATTACHMENT,
+            gpu.GPU.DEPTH_COMPONENT32F,
+            2*self.width,
+            2*self.height
+        )        
+
         # Opções:
         # - COLOR_ATTACHMENT: alocações para as cores da imagem renderizada
         # - DEPTH_ATTACHMENT: alocações para as profundidades da imagem renderizada
@@ -97,6 +115,7 @@ class Renderizador:
     def pre(self):
         """Rotinas pré renderização."""
         # Função invocada antes do processo de renderização iniciar.
+        gpu.GPU.bind_framebuffer(gpu.GPU.FRAMEBUFFER, self.framebuffers["BACK"])
 
         # Limpa o frame buffers atual
         gpu.GPU.clear_buffer()
@@ -108,7 +127,27 @@ class Renderizador:
     def pos(self):
         """Rotinas pós renderização."""
         # Função invocada após o processo de renderização terminar.
-
+        gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["BACK"])
+        gpu.GPU.bind_framebuffer(gpu.GPU.DRAW_FRAMEBUFFER, self.framebuffers["FRONT"])
+        j = 0
+        y = 0
+        while j<(2*self.height-2):
+            i =0 
+            x = 0   
+            while i<(2*self.width-2):
+                p1 = gpu.GPU.read_pixel([int(i),int(j)],gpu.GPU.RGB8)   
+                p2 = gpu.GPU.read_pixel([i+1,j],gpu.GPU.RGB8)   
+                p3 = gpu.GPU.read_pixel([i,j+1],gpu.GPU.RGB8)   
+                p4 = gpu.GPU.read_pixel([i+1,j+1],gpu.GPU.RGB8)
+                lista = [p1,p2,p3,p4]
+                pf =np.mean(lista, axis=0)
+                # print(p1,p2,p3)
+                gpu.GPU.draw_pixel([x,y],gpu.GPU.RGB8,pf)
+                x+=1
+                i+=2
+            j+=2
+            y+=1     
+        gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["FRONT"])
         # Essa é uma chamada conveniente para manipulação de buffers
         # ao final da renderização de um frame. Como por exemplo, executar
         # downscaling da imagem.
@@ -181,8 +220,8 @@ class Renderizador:
 
         # Iniciando Biblioteca Gráfica
         gl.GL.setup(
-            self.width,
-            self.height,
+            2*self.width,
+            2*self.height,
             near=0.01,
             far=1000
         )

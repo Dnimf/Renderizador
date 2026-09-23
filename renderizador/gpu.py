@@ -85,6 +85,7 @@ class GPU:
         elif buffer == GPU.FRAMEBUFFER:
             GPU.draw_framebuffer = position
             GPU.read_framebuffer = position
+        print(GPU.draw_framebuffer,GPU.read_framebuffer)
 
     @staticmethod
     def framebuffer_storage(position, attachment, mode, width, height):

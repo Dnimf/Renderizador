@@ -30,6 +30,7 @@ class GL:
     posicao_global = 1
     @staticmethod
     def setup(width, height, near=0.01, far=1000):
+        # print(f"aaaaa {GL.width},{width}")
         """Definr parametros para câmera de razão de aspecto, plano próximo e distante."""
         GL.width = width
         GL.height = height
@@ -287,7 +288,7 @@ class GL:
             r*=255
             g*=255
             b*=255
-            print(r,g,b)
+            # print(r,g,b)
         r_1 = r
         g_1 = g
         b_1 = b
@@ -312,7 +313,7 @@ class GL:
                 return True
             return False
         def verifica_cor_textura(alfa,beta,gama,z,Z_norm,p):
-            nonlocal r,g,b
+            nonlocal r,g,b, r_1,g_1,b_1
             # print(f"textcoord :{texCoord}")
             # print(f"textcorordindex :{texCoordIndex}")
             u_0 = texCoord[0][0]
@@ -337,11 +338,15 @@ class GL:
             # print(u,v)
             # print(u_f,v_f)
             cor = GL.image_texture[math.floor(u_f),(255-math.floor(v_f))]
-            r = cor[0]                     
-            g = cor[1]                     
-            b = cor[2]                     
+            # r = cor[0]                     
+            # g = cor[1]                     
+            # b = cor[2]
+            r_1 = cor[0]                     
+            g_1 = cor[1]                     
+            b_1 = cor[2]        
+            # print(r,g,b)               
         def verifica_cor(alfa,beta,gama,cores,Z,Z_norm,p):
-            nonlocal r,g,b
+            nonlocal r,g,b,r_1,g_1,b_1
             c1 = cores[0]
             c2 = cores[1]
             c3 = cores[2]
@@ -359,9 +364,9 @@ class GL:
             b_1_2 = beta*(255*c2[2]/z_s[1])            
             b_1_3 = gama*(255*c3[2]/z_s[2])
             b_1 = (b_1_1+b_1_2+ b_1_3)/Z
-            r = abs(r_1)
-            g = abs(g_1)
-            b = abs(b_1)
+            r_1 = abs(r_1)
+            g_1 = abs(g_1)
+            b_1 = abs(b_1)
             # print(255*r,255*g,255*b)
         def cria_aresta(p,pp):
             return [pp[0]-p[0],pp[1]-p[1]]
@@ -407,8 +412,8 @@ class GL:
                             return True    
             return False
         def caixa(p0,p1,p2):
-            x_min = 255
-            y_min = 255
+            x_min = 25500
+            y_min = 25500
             x_max = 0
             y_max =0
             if p0[0] <x_min:
@@ -445,9 +450,10 @@ class GL:
                     # print(i,j)
                     # gpu.GPU.draw_pixel([int(i), int(j)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)        
                     if limite(i,j):
-
+                        # print(r,g,b)
                         if esta_dentro(p0,p1,p2,[(i+0.5),(j+0.5)]):
                             if prof:
+                                # print(r,g,b, i, j,  GL.width,GL.height)
                                 gpu.GPU.draw_pixel([round(i), round(j)], gpu.GPU.RGB8, [round(r), round(g), round(b)])  # altera pixel (u, v, tipo, r, g, b)        
                             
                     i+=1
@@ -489,7 +495,7 @@ class GL:
         # inicialmente, para o TriangleSet, o desenho das linhas com a cor emissiva
         # (emissiveColor), conforme implementar novos materias você deverá suportar outros
         # tipos de cores.
-
+        print(f"largura{GL.width}")
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         ajuste = np.array([[(GL.width/2),0,0,(GL.width/2)],[0,-(GL.height/2),0,(GL.height/2)],[0,0,1,0],[0,0,0,1]])
         # print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
