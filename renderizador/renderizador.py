@@ -46,7 +46,7 @@ class Renderizador:
         # Define o atributo FRONT como o FrameBuffe principal
         self.framebuffers["FRONT"] = fbo[0]
         self.framebuffers["BACK"] = fbo[1]
-
+        # print(self.framebuffers)
         # Define que a posição criada será usada para desenho e leitura
         # gpu.GPU.bind_framebuffer(gpu.GPU.FRAMEBUFFER, self.framebuffers["FRONT"])
         gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["FRONT"])
@@ -129,6 +129,7 @@ class Renderizador:
         # Função invocada após o processo de renderização terminar.
         gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["BACK"])
         gpu.GPU.bind_framebuffer(gpu.GPU.DRAW_FRAMEBUFFER, self.framebuffers["FRONT"])
+        gpu.GPU.clear_buffer()
         j = 0
         y = 0
         while j<(2*self.height-2):
@@ -147,7 +148,9 @@ class Renderizador:
                 i+=2
             j+=2
             y+=1     
-        gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["FRONT"])
+        # gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["FRONT"])
+        # gpu.GPU.clear_buffer()
+        
         # Essa é uma chamada conveniente para manipulação de buffers
         # ao final da renderização de um frame. Como por exemplo, executar
         # downscaling da imagem.
@@ -155,7 +158,6 @@ class Renderizador:
         # Método para a troca dos buffers (NÃO IMPLEMENTADO)
         # Esse método será utilizado na fase de implementação de animações
         gpu.GPU.swap_buffers()
-
     def mapping(self):
         """Mapeamento de funções para as rotinas de renderização."""
         # Rotinas encapsuladas na classe GL (Graphics Library)

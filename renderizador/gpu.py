@@ -85,7 +85,7 @@ class GPU:
         elif buffer == GPU.FRAMEBUFFER:
             GPU.draw_framebuffer = position
             GPU.read_framebuffer = position
-        print(GPU.draw_framebuffer,GPU.read_framebuffer)
+        # print(GPU.draw_framebuffer,GPU.read_framebuffer)
 
     @staticmethod
     def framebuffer_storage(position, attachment, mode, width, height):
@@ -251,3 +251,11 @@ class GPU:
     @staticmethod
     def swap_buffers():
         """Método para a troca dos buffers (NÃO IMPLEMENTADA)."""
+        # GPU.clear_buffer()
+        
+        GPU.bind_framebuffer(GPU.READ_FRAMEBUFFER, 0)
+        # GPU.bind_framebuffer(GPU.DRAW_FRAMEBUFFER, 0)
+        # GPU.clear_buffer()
+        GPU.bind_framebuffer(GPU.READ_FRAMEBUFFER, 0)
+        GPU.bind_framebuffer(GPU.DRAW_FRAMEBUFFER, 1)
+        

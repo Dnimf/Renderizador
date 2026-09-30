@@ -28,6 +28,11 @@ class GL:
     matriz_camera =[]
     image_texture = []
     posicao_global = 1
+    osicao_camera =[]
+    # headlight ={}
+    directionalL={"ambientIntensity":0,}
+    inversa = []
+    normal = []
     @staticmethod
     def setup(width, height, near=0.01, far=1000):
         # print(f"aaaaa {GL.width},{width}")
@@ -36,7 +41,137 @@ class GL:
         GL.height = height
         GL.near = near
         GL.far = far
-
+    def posicao_pixel(alfa, beta, gama, z_s, pontos, Z):  # 3 x 3 (um vértice por linha)
+        pesos = np.array([alfa/z_s[0], beta/z_s[1], gama/z_s[2]])
+        return (pesos @ pontos) / Z    
+    def encontra_normal(p0,p1,p2):
+        p0_p1 = np.subtract(p1,p0)
+        p0_p2 = np.subtract(p2,p0)
+        # print(f"po_p1 {p0_p1},p0_p2{p0_p2}")
+        n = np.cross(p0_p1[:3],p0_p2[:3])
+        n = n/np.linalg.norm(n)
+        # n1 = np.append(n,0)
+        # print(f"n1 {n1}")
+        return n
+    def transforma_normal(n):
+        t = np.array(GL.matriz_transformacao[-1])[:3, :3]
+        inv = np.linalg.inv(t)
+        final = np.transpose(inv)
+        # print(f"fina {final}")
+        # print(f"normal; {n}")
+        final = final@n
+        final = final/np.linalg.norm(final)
+        return final
+    def enontra_luz_difusa(k, r):
+        # print(f"antesd {GL.directionalL}")
+       
+        if r == 0:
+            a = 1
+        else:
+            a = 1/(r**2)
+        I = GL.directionalL["intensity"]
+        og =GL.directionalL["direction"].copy()
+        og.append(0)
+        t = np.array(GL.matriz_transformacao[-1])
+        inv = np.linalg.inv(t)
+        final = np.transpose(inv)
+        # print(og, t)
+        # final = np.transpose(t)
+        og = np.matmul(og, final)
+        og = og[:3] / np.linalg.norm(og[:3])
+        # print(f"normal {GL.normal}direcao {GL.directionalL["direction"]}")
+        ang = np.dot(GL.normal,og[:3])
+        temp  = np.multiply(k,I)
+        temp = np.array(temp)*a
+        # print(f"temp {temp}, ---")
+        # print(f"ang {ang}")
+        
+        temp = temp*max(0,-ang)
+        # print(temp)
+        return temp, ang
+    def acha_cor_especular(k,p,s):
+        I = GL.directionalL["intensity"]
+        # print(I)
+        temp = I*np.array(k)
+        og =GL.directionalL["direction"].copy()
+        # print(p)
+        og.append(0)
+        t = np.array(GL.matriz_transformacao[-1])
+        inv = np.linalg.inv(t)
+        final = np.transpose(inv)
+        og = np.matmul(og, final)
+        og = -og[:3] / np.linalg.norm(og[:3])
+        
+        cam_local = np.matmul(inv, GL.posicao_camera)
+        cam_local = cam_local[:3] / cam_local[3]
+        v = cam_local - np.array(p)
+        v = v / np.linalg.norm(v)
+        
+        
+        # p = np.array(p)/np.linalg.norm(p)
+        bi = (np.array(og))+np.array(v)
+        bi = bi/np.linalg.norm(bi)
+        # print(bi)
+        ang = np.dot(GL.normal,bi)
+        # print(ang)
+        ang = min(1, max(0,ang))
+        
+        temp = temp *(ang**(s*128))
+        return temp
+    
+    def acha_cor_especular_1(k):
+            I = GL.directionalL["intensity"]
+            # print(I)
+            temp = I*np.array(k)
+            og =GL.directionalL["direction"].copy()
+            # print(p)
+            og.append(0)
+            t = np.array(GL.matriz_transformacao[-1])
+            inv = np.linalg.inv(t)
+            final = np.transpose(inv)
+            og = np.matmul(og, final)
+            og = -og[:3] / np.linalg.norm(og[:3])
+            
+            cam_local = np.matmul(inv, GL.posicao_camera)
+            cam_local = cam_local[:3] / cam_local[3]
+            return og,cam_local,temp
+    def encontra_normal_pixel(alfa,beta,gama,z_s,pontos,Z):
+            p0 = pontos[0][:3]
+            p1 = pontos[1][:3]
+            p2 = pontos[2][:3]
+            r_1_1 = alfa*(p0[0]/z_s[0])
+            r_1_2 = beta*(p0[1]/z_s[0])            
+            r_1_3 = gama*(p0[2]/z_s[0])
+            x = (r_1_1+r_1_2+ r_1_3)/Z
+            
+            g_1_1 = alfa*(p1[0]/z_s[1])
+            g_1_2 = beta*(p1[1]/z_s[1])            
+            g_1_3 = gama*(p1[2]/z_s[1])
+            y = (g_1_1+g_1_2+ g_1_3)/Z
+            
+            b_1_1 = alfa*(p0[0]/z_s[2])
+            b_1_2 = beta*(p1[1]/z_s[2])            
+            b_1_3 = gama*(p2[2]/z_s[2])
+            z= (b_1_1+b_1_2+ b_1_3)/Z
+            normal = [x,y,z]
+            return normal
+    def acha_cor_especular_2(cam_local,p,og,s,N,temp):
+        p = p[:3]
+        # print(p)
+        v = cam_local - np.array(p)
+        v = v / np.linalg.norm(v)
+        
+        
+        # p = np.array(p)/np.linalg.norm(p)
+        bi = (np.array(og))+np.array(v)
+        bi = bi/np.linalg.norm(bi)
+        # print(bi)
+        ang = np.dot(N,bi)
+        # print(ang)
+        ang = min(1, max(0,ang))
+        
+        temp = temp *(ang**(s*128))
+        return temp
     @staticmethod
     def polypoint2D(point, colors):
         """Função usada para renderizar Polypoint2D."""
@@ -97,7 +232,7 @@ class GL:
             s = 0
             if(p1[0]-p0[0]) != 0:
                 s = (p1[1]-p0[1])/(p1[0]-p0[0])
-            print(p0, s)
+            # print(p0, s)
             return s
         def uv(p0,p1):
             if p0[0]<=p1[0]:
@@ -148,7 +283,7 @@ class GL:
                 v = p[3]
                 while v>= p[1]:
                     if limite(u,v):
-                        print(u, v)
+                        # print(u, v)
                         gpu.GPU.draw_pixel([int(u), int(v)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)
                     u-=s
                     v-=1
@@ -250,7 +385,7 @@ class GL:
 
     @staticmethod
     def triangleSet2D(vertices,colors, coordIndex, colorPerVertex, color, colorIndex='',
-                       texCoord='', texCoordIndex='', current_texture='', z_s='', z_norm=''):
+                       texCoord='', texCoordIndex='', current_texture='', z_s='', z_norm='', pontos =[]):
         """Função usada para renderizar TriangleSet2D."""
         # https://www.web3d.org/specifications/X3Dv4/ISO-IEC19775-1v4-IS/Part01/components/geometry2D.html#TriangleSet2D
         # Nessa função você receberá os vertices de um triângulo no parâmetro vertices,
@@ -262,11 +397,11 @@ class GL:
         # você pode assumir inicialmente o desenho das linhas com a cor emissiva (emissiveColor).
         # image_texture = gpu.GPU.load_texture(current_texture[0])
         # print (image_texture)
-        # print(z_s)
-        print(f"colors {colors}")
-        print(f"colorspv {colorPerVertex}")
-        print(f"color {color}")
-        print(f"verticces {vertices}")
+        # # print(z_s)
+        # print(f"colors {colors}")
+        # print(f"colorspv {colorPerVertex}")
+        # print(f"color {color}")
+        # print(f"verticces {vertices}")
         # const = 255
         # if current_texture:
         #     const = 1
@@ -280,15 +415,43 @@ class GL:
             return False
         cor = colors["emissiveColor"]
         transp = colors["transparency"]
+        especular = colors["specularColor"]
+        s = colors["shininess"]
+        # print(vertices)
+        # print(f"aa{pontos}")
+        pontos_1 = pontos
+        p = np.mean([pontos[0], pontos[1], pontos[2]], axis=0)[:3]
+        # p = np.append(p, z)
+        # x = (vertices[0]+vertices[2]+vertices[4])/3
+        # y = (vertices[1]+vertices[3]+vertices[5])/3
+        # p = [x,y,z]
+        # print(p)
+        og,cam_local,temp = GL.acha_cor_especular_1(especular)
+        if cor ==[0,0,0]:
+            # e = GL.acha_cor_especular(especular,p,s)
+            # print(e);
+            d,grau=GL.enontra_luz_difusa(k=colors["diffuseColor"],r=0)
+            cor = np.array(d)
+            # cor = np.array(e)+np.array(d)
+            # print(f"epecular{e} junto {e+cor}")
+        
+        # cor = [1,1,0]
+        # print(cor)
         cor1 = color
         r=cor[0]
         g=cor[1]
         b=cor[2]
         if not current_texture:
             r*=255
+            if r>255:
+                r = 255
             g*=255
+            if g>255:
+                g =255
             b*=255
-            # print(r,g,b)
+            if b>255:
+                b =255
+            # print(f"rgb {r,g,b}")
         r_1 = r
         g_1 = g
         b_1 = b
@@ -300,11 +463,17 @@ class GL:
             y = p[1]-0.5
             # print(x,y)
             profundidade = gpu.GPU.read_pixel([int(x), int(y)], gpu.GPU.DEPTH_COMPONENT32F)
-            cor = gpu.GPU.read_pixel([int(x), int(y)], gpu.GPU.RGBA8)
+            if transp !=0:
+                cor = gpu.GPU.read_pixel([int(x), int(y)], gpu.GPU.RGBA8)
+        
             # print(cor)
-            r_a = cor[0]*transp
-            g_a = cor[1]*transp
-            b_a = cor[2]*transp
+                r_a = cor[0]*transp
+                g_a = cor[1]*transp
+                b_a = cor[2]*transp
+            else:
+                r_a = 0
+                b_a = 0
+                g_a = 0
             if(Z_norm<profundidade):
                 r=r_a+(r_1*(1-transp))
                 g=g_a+(g_1*(1-transp))
@@ -376,11 +545,22 @@ class GL:
             b_x = a[0]
             b_y = a[1]
             return (a_x*b_y)-(a_y*b_x)
+        
+        p0 = [vertices[0],vertices[1]]
+        p1 = [vertices[2],vertices[3]]
+        p2 = [vertices[4],vertices[5]]
+        a0 = cria_aresta(p0,p1); # (bx-ax)(by-ay)
+        a1 = cria_aresta(p1,p2); # (cx-bx)(cy-by)
+        a2 = cria_aresta(p2,p0); # (ax-cx)(ay-cy)
+        xa_xb = cria_aresta(p1,p0)
+        alpha2 = -(xa_xb[0]*a1[1])+ (xa_xb[1]*a1[0])
+        b_c = cria_aresta(p2,p1)
+        beta2 = -(b_c[0]*a2[1])+(b_c[1]*a2[0])
+        
         def esta_dentro(p0,p1,p2, p):
-            nonlocal cont
-            a0 = cria_aresta(p0,p1); # (bx-ax)(by-ay)
-            a1 = cria_aresta(p1,p2); # (cx-bx)(cy-by)
-            a2 = cria_aresta(p2,p0); # (ax-cx)(ay-cy)
+            nonlocal cont,a0,a1,a2, alpha2, b_c, beta2, pontos_1,cor,r,g,b
+            # P0, P1, P2 = list(zip(pontos[0][::3], pontos[1::3][1], pontos[2][2::3]))
+            # print(pontos_1)
 
             n0 =cria_aresta(p0,p) # (px-ax)(py-ay)
             n1 =cria_aresta(p1,p) # (px-bx)(py-by)
@@ -388,27 +568,36 @@ class GL:
             sera = verifica_individual(a0,n0)
             sera1 = verifica_individual(a1,n1)
             sera2 = verifica_individual(a2,n2)
-            xa_xb = cria_aresta(p1,p0)
-            alpha1 = -(n1[0]*a1[1]) + (n1[1]*a1[0])
-            alpha2 = -(xa_xb[0]*a1[1])+ (xa_xb[1]*a1[0])
-            b_c = cria_aresta(p2,p1)
-            beta1 = -(n2[0]*a2[1])+(n2[1]*a2[0])
-            beta2 = -(b_c[0]*a2[1])+(b_c[1]*a2[0])
-            alpha = alpha1/alpha2
-            beta= beta1/beta2
-            gama = 1-alpha-beta
-            Z = (alpha/z_s[0] + beta/z_s[1]+ gama/z_s[2])
-            Z_norm = 1/(alpha/z_norm[0] + beta/z_norm[1]+ gama/z_norm[2])
-            if color:
-                verifica_cor(alpha,beta,gama,cor1,Z,Z_norm,p)
-                cont+=1
-            elif current_texture:
-                verifica_cor_textura(alpha,beta,gama,Z,Z_norm,p)
-
             if sera>=0:
                 if sera1>=0: 
                     if sera2>=0:
+                        alpha1 = -(n1[0]*a1[1]) + (n1[1]*a1[0])
+                        beta1 = -(n2[0]*a2[1])+(n2[1]*a2[0])
+                        alpha = alpha1/alpha2
+                        beta= beta1/beta2
+                        gama = 1-alpha-beta
+                        Z_norm = 1/(alpha/z_norm[0] + beta/z_norm[1]+ gama/z_norm[2])
                         if verifica_profundidade(Z_norm,p):
+                            Z = (alpha/z_s[0] + beta/z_s[1]+ gama/z_s[2])
+                            pix = GL.posicao_pixel(alpha,beta,gama,z_s,pontos_1,Z)
+                            n = GL.encontra_normal_pixel(alpha,beta,gama,z_s,pontos_1,Z)
+                            esp = GL.acha_cor_especular_2(cam_local,pix,og,s,GL.normal,temp)
+                            cor = np.array(d)+np.array(esp)
+                            r = cor[0]*255
+                            if r>255:
+                                r = 255                                                                 
+                            g = cor[1]*255
+                            if g >255:
+                                g = 255
+                            b = cor[2]*255                                                                     
+                            if b > 255:     
+                                b = 255                                                             
+                            # print(esp)
+                            if color:
+                                verifica_cor(alpha,beta,gama,cor1,Z,Z_norm,p)
+                                cont+=1
+                            elif current_texture:
+                                verifica_cor_textura(alpha,beta,gama,Z,Z_norm,p)
                             return True    
             return False
         def caixa(p0,p1,p2):
@@ -447,30 +636,26 @@ class GL:
             while j<=c[3]:
                 i = c[0]
                 while i<=c[2]:
-                    # print(i,j)
-                    # gpu.GPU.draw_pixel([int(i), int(j)], gpu.GPU.RGB8, [r, g, b])  # altera pixel (u, v, tipo, r, g, b)        
                     if limite(i,j):
-                        # print(r,g,b)
                         if esta_dentro(p0,p1,p2,[(i+0.5),(j+0.5)]):
                             if prof:
-                                # print(r,g,b, i, j,  GL.width,GL.height)
+                                # print(f"rgb {r,g,b}")
                                 gpu.GPU.draw_pixel([round(i), round(j)], gpu.GPU.RGB8, [round(r), round(g), round(b)])  # altera pixel (u, v, tipo, r, g, b)        
                             
                     i+=1
                 j+=1
-            # print(c)
         i=0
         pontos =[]
-        while i<len(vertices):
-            x = vertices[i]
-            y = vertices[i+1]
-            pontos.append([x,y])
-            i+=2
-        # print(pontos)
+        # while i<len(vertices):
+        #     x = vertices[i]
+        #     y = vertices[i+1]
+        #     pontos.append([x,y])
+        #     i+=2
+        pontos = list(zip(vertices[::2], vertices[1::2]))
         k = 0
-        while k<len(pontos):
-            preenche_triangulo(pontos[k],pontos[k+1], pontos[k+2])
-            k+=3
+        # while k<len(pontos):
+        preenche_triangulo(pontos[0],pontos[1], pontos[2])
+            # k+=3
         # gpu.GPU.draw_pixel([int(ponto__teste_1[0]), int(ponto__teste_1[1])], gpu.GPU.RGB8, [255, 255, 0])  # altera pixel (u, v, tipo, r, g, b)            
         # gpu.GPU.draw_pixel([int(ponto__teste_2[0]), int(ponto__teste_2[1])], gpu.GPU.RGB8, [255, 255, 0])  # altera pixel (u, v, tipo, r, g, b)            
         # gpu.GPU.draw_pixel([int(ponto__teste_3[0]), int(ponto__teste_3[1])], gpu.GPU.RGB8, [255, 255, 0])  # altera pixel (u, v, tipo, r, g, b)            
@@ -495,7 +680,6 @@ class GL:
         # inicialmente, para o TriangleSet, o desenho das linhas com a cor emissiva
         # (emissiveColor), conforme implementar novos materias você deverá suportar outros
         # tipos de cores.
-        print(f"largura{GL.width}")
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         ajuste = np.array([[(GL.width/2),0,0,(GL.width/2)],[0,-(GL.height/2),0,(GL.height/2)],[0,0,1,0],[0,0,0,1]])
         # print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
@@ -510,8 +694,12 @@ class GL:
         z=[]
         z_norm = []    
         # print(f"matriztrot {GL.matriz_transformacao}")
-        for j in pontos:
-            transf = np.matmul(GL.matriz_transformacao[-1],j)
+        n = GL.encontra_normal(pontos[0],pontos[1],pontos[2])
+        # n = GL.transforma_normal(n)
+        # print(n)
+        GL.normal = n
+        for j in range(len(pontos)):
+            transf = np.matmul(GL.matriz_transformacao[-1],pontos[j])
             camera = np.matmul(GL.matriz_camera,transf)
             z.append(camera[2]/camera[3])
             proj = np.matmul(GL.matriz_projecao,camera)
@@ -529,9 +717,8 @@ class GL:
             result.append(i[0])
             result.append(i[1])
             # z.append(i[2])
-        print(f"vertices og{result}")
         GL.triangleSet2D(result,colors, coordIndex, colorPerVertex, color, colorIndex,
-                       texCoord, texCoordIndex, current_texture, z, z_norm)
+                       texCoord, texCoordIndex, current_texture, z, z_norm,pontos)
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
         # for i in pontos_transformados:
         #     # print(f"a {int(i[0]), int(i[1])}")
@@ -576,7 +763,7 @@ class GL:
             return [x,y,z,w]
         
         GL.posicao_global = position[2]
-        
+        GL.posicao_camera = np.append(position, 1) 
         rotacion = quartenion(orientation)
         trans = translacao(position)
         rotacion_inv = np.linalg.inv(rotacion)
@@ -594,7 +781,7 @@ class GL:
         d = [0,0,-1,0]
         matriz = [a,b,c,d]               
         GL.matriz_projecao = matriz
-        print(f"testa profundidade: {gpu.GPU.read_pixel([0, 0], gpu.GPU.DEPTH_COMPONENT32F)}")
+        # print(f"testa profundidade: {gpu.GPU.read_pixel([0, 0], gpu.GPU.DEPTH_COMPONENT32F)}")
         
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         # print("Viewpoint : ", end='')
@@ -669,7 +856,7 @@ class GL:
         # print(GL.matriz_transformacao)
         # return padrao
             
-        print("")
+        # print("")
 
     @staticmethod
     def transform_out():
@@ -706,12 +893,12 @@ class GL:
             for pp in p:
                 if pp not in pontos_dist:
                     pontos_dist.append(pp)
-        print("TriangleStripSet : pontos = {0} ".format(point), end='')
-        print(stripCount)
-        for i, strip in enumerate(stripCount):
-            print("strip[{0}] = {1} ".format(i, strip), end='')
-        print("")
-        print("TriangleStripSet : colors = {0}".format(colors)) # imprime no terminal as cores
+        # print("TriangleStripSet : pontos = {0} ".format(point), end='')
+        # print(stripCount)
+        # for i, strip in enumerate(stripCount):
+        #     print("strip[{0}] = {1} ".format(i, strip), end='')
+        # print("")
+        # print("TriangleStripSet : colors = {0}".format(colors)) # imprime no terminal as cores
         i = 0;
         while i<(len(point)-2):
             pontos.append([point[i],point[i+1],point[i+2]])
@@ -719,23 +906,23 @@ class GL:
         j = 2
         vira =0
         cont = 0
-        print(f" tamanho original {len(point)}, novo tamanho {len(pontos)}\n\n ponto 0: {point[0]},{point[1]},{point[2]} | {pontos[0]} \n\n ultimo ponto: {point[-3]},{point[-2]},{point[-1]}| {pontos[-1]}")
+        # print(f" tamanho original {len(point)}, novo tamanho {len(pontos)}\n\n ponto 0: {point[0]},{point[1]},{point[2]} | {pontos[0]} \n\n ultimo ponto: {point[-3]},{point[-2]},{point[-1]}| {pontos[-1]}")
         while j<=(len(pontos)):
             p1 = pontos[j-2]
             p2 = pontos[j-1]
             p3 = pontos[j]
             pontos_novos([p1,p2,p3])
-            print(f"pontos_dist {len(pontos_dist)}")
+            # print(f"pontos_dist {len(pontos_dist)}")
             if vira:
                 triangulos.append([p1[0],p1[1],p1[2],p3[0],p3[1],p3[2],p2[0],p2[1],p2[2]])
                 vira =0
             else:
                 triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
                 vira = 1
-            print(F"Triangulso {triangulos}, tamanho {len(triangulos)*3}")
+            # print(F"Triangulso {triangulos}, tamanho {len(triangulos)*3}")
             j+=1
             if (len(pontos_dist)) >=stripCount[cont]:
-                print(triangulos)
+                # print(triangulos)
                 for k in triangulos:
                     # print(f"triangulos {k}")
                     GL.triangleSet(k,colors)
@@ -826,8 +1013,8 @@ class GL:
         # cor da textura conforme a posição do mapeamento. Dentro da classe GPU já está
         # implementadado um método para a leitura de imagens.
         # Os prints abaixo são só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print(f"face: {coord}")
-        print(f"colors asjhsdxtcyvubinoim{colors}")
+        # print(f"face: {coord}")
+        # print(f"colors asjhsdxtcyvubinoim{colors}")
         i = 0
         pontos =[]
         while i<(len(coord)-2):
@@ -858,14 +1045,14 @@ class GL:
                     #     triangulos.append([p1[0],p1[1],p1[2],p3[0],p3[1],p3[2],p2[0],p2[1],p2[2]])
                     #     vira = 0
                     # else:  
-                    triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
+                    triangulos = [p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]]
                         # vira = 1
                     t+=1
-                    for k in range(len(triangulos)):
-                        if colorPerVertex:
-                        # print(f"triangulos {k}\n")
-                            GL.triangleSet(triangulos[k],colors, coordIndex, colorPerVertex, color, colorIndex,
-                                texCoord, texCoordIndex, current_texture)                 
+            # for k in range(len(triangulos)):
+                # if colorPerVertex:
+                # print(f"triangulos {k}\n")
+                    GL.triangleSet(triangulos,colors, coordIndex, colorPerVertex, color, colorIndex,
+                        texCoord, texCoordIndex, current_texture)                 
         if not current_texture and color:
             while c<len(color):
                 rgb.append([color[c-2],color[c-1],color[c]])
@@ -907,8 +1094,8 @@ class GL:
                                 texCoord, texCoordIndex, current_texture)         
         if current_texture:
             GL.image_texture = gpu.GPU.load_texture(current_texture[0])
-            print(f"textcoord{texCoord}")
-            print(f"textcoord index{texCoordIndex}")
+            # print(f"textcoord{texCoord}")
+            # print(f"textcoord index{texCoordIndex}")
             textura = []
             c =1        
             while c<len(texCoord):
@@ -923,8 +1110,8 @@ class GL:
                 else:
                     temp.append(j)
             tex = []
-            print(textid)
-            print(textura)
+            # print(textid)
+            # print(textura)
             for i in textid:
                 tex.append([textura[i[0]], textura[i[1]], textura[i[2]]])             
             for i in range(len(listas)):
@@ -943,10 +1130,10 @@ class GL:
                     triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
                         # vira = 1
                     t+=1
-                    for k in range(len(triangulos)):
-                        # print(f"triangulos {k}\n")
-                        GL.triangleSet(triangulos[k],colors, coordIndex, colorPerVertex, color, colorIndex,
-                            tex[i], texCoordIndex, 1)           
+                for k in range(len(triangulos)):
+                    # print(f"triangulos {k}\n")
+                    GL.triangleSet(triangulos[k],colors, coordIndex, colorPerVertex, color, colorIndex,
+                        tex[i], texCoordIndex, 1)           
         # print("------------------------\n\n\n\n\n\n\n\n\n\n\n\n")   
         # print("IndexedFaceSet : ")
         # if coord:
@@ -1039,9 +1226,10 @@ class GL:
         # faz com que o visualizador forneça sempre uma luz do ponto de vista do usuário.
         # A luz headlight deve ser direcional, ter intensidade = 1, cor = (1 1 1),
         # ambientIntensity = 0,0 e direção = (0 0 −1).
-
+        if headlight:
+            GL.directionalLight(ambientIntensity=[0,0],color=[1,1,1],intensity=1,direction=[0,0,-1])
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("NavigationInfo : headlight = {0}".format(headlight)) # imprime no terminal
+        # print("NavigationInfo : headlight = {0}".format(headlight)) # imprime no terminal
 
     @staticmethod
     def directionalLight(ambientIntensity, color, intensity, direction):
@@ -1052,12 +1240,15 @@ class GL:
         # cor, intensidade. O campo de direção especifica o vetor de direção da iluminação
         # que emana da fonte de luz no sistema de coordenadas local. A luz é emitida ao
         # longo de raios paralelos de uma distância infinita.
-
+        GL.directionalL["ambientIntensity"] = ambientIntensity
+        GL.directionalL["color"] = color
+        GL.directionalL["intensity"] = intensity
+        GL.directionalL["direction"] = direction
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("DirectionalLight : ambientIntensity = {0}".format(ambientIntensity))
-        print("DirectionalLight : color = {0}".format(color)) # imprime no terminal
-        print("DirectionalLight : intensity = {0}".format(intensity)) # imprime no terminal
-        print("DirectionalLight : direction = {0}".format(direction)) # imprime no terminal
+        # print("DirectionalLight : ambientIntensity = {0}".format(ambientIntensity))
+        # print("DirectionalLight : color = {0}".format(color)) # imprime no terminal
+        # print("DirectionalLight : intensity = {0}".format(intensity)) # imprime no terminal
+        # print("DirectionalLight : direction = {0}".format(direction)) # imprime no terminal
 
     @staticmethod
     def pointLight(ambientIntensity, color, intensity, location):
@@ -1070,6 +1261,8 @@ class GL:
         # zero. A iluminação do nó PointLight diminui com a distância especificada.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
+
+        
         print("PointLight : ambientIntensity = {0}".format(ambientIntensity))
         print("PointLight : color = {0}".format(color)) # imprime no terminal
         print("PointLight : intensity = {0}".format(intensity)) # imprime no terminal
@@ -1106,15 +1299,14 @@ class GL:
         # Deve retornar a fração de tempo passada em fraction_changed
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("TimeSensor : cycleInterval = {0}".format(cycleInterval)) # imprime no terminal
-        print("TimeSensor : loop = {0}".format(loop))
+        # print("TimeSensor : cycleInterval = {0}".format(cycleInterval)) # imprime no terminal
+        # print("TimeSensor : loop = {0}".format(loop))
 
         # Esse método já está implementado para os alunos como exemplo
         epoch = time.time()  # time in seconds since the epoch as a floating point number.
         fraction_changed = (epoch % cycleInterval) / cycleInterval
 
         return fraction_changed
-
     @staticmethod
     def splinePositionInterpolator(set_fraction, key, keyValue, closed):
         """Interpola não linearmente entre uma lista de vetores 3D."""
@@ -1128,14 +1320,72 @@ class GL:
         # na primeira e na última chave não forem idênticos, o campo closed será ignorado.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("SplinePositionInterpolator : set_fraction = {0}".format(set_fraction))
-        print("SplinePositionInterpolator : key = {0}".format(key)) # imprime no terminal
-        print("SplinePositionInterpolator : keyValue = {0}".format(keyValue))
-        print("SplinePositionInterpolator : closed = {0}".format(closed))
+        # print("SplinePositionInterpolator : set_fraction = {0}".format(set_fraction))
+        # print("SplinePositionInterpolator : key = {0}".format(key)) # imprime no terminal
+        # print("SplinePositionInterpolator : keyValue = {0}".format(keyValue))
+        # print("SplinePositionInterpolator : closed = {0}".format(closed))
+        # print(f"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa = {len(key)},{len(keyValue)/3}")
 
         # Abaixo está só um exemplo de como os dados podem ser calculados e transferidos
-        value_changed = [0.0, 0.0, 0.0]
-        
+        # vetores = list(zip(keyValue[::3], keyValue[1::3]))
+        vetores = list(zip(keyValue[::3], keyValue[1::3], keyValue[2::3]))
+        if set_fraction <= key[0]:
+            return list(vetores[0])
+        if set_fraction >= key[-1]:
+            return list(vetores[-1])
+        dicionario = dict(zip(key, vetores))
+        maior = 0
+        menor = 0
+        for i in range(len(key)):
+            # if abs(key[i]-set_fraction) <0.001:
+            #     maior = i+1
+            #     menor = (i-1)
+            #     break                
+            if key[i]-set_fraction<key[1] and key[i]-set_fraction>0:
+                maior = i
+                menor = (i-1)
+                break
+        # print(dicionario)
+        print(maior, menor)
+        l1 = [-0.5,1.5,-1.5,0.5]
+        l2 = [1,-2.5,2,-0.5]
+        l3 = [-0.5,0,0.5,0]
+        l4 = [0,1,0,0]
+        if closed and vetores[0] ==  vetores[-1]:
+    # vizinhos circulares (pulando o ponto repetido)
+            n = len(vetores) - 1            # último == primeiro, então ignora um deles
+            p0 = vetores[(menor - 1) % n]
+            p1 = vetores[menor]
+            p2 = vetores[maior % n]
+            p3 = vetores[(maior + 1) % n]
+        else:
+            if menor == 0:
+                p0 = dicionario[key[menor]]
+                p1 = p0
+            else:
+                p0 = dicionario[key[menor-1]]
+                p1 = dicionario[key[menor]]
+            if maior == len(key)-1:
+                p2 = dicionario[key[maior]]
+                p3 = p2
+            else:
+                p2 = dicionario[key[maior]]
+                p3 = dicionario[key[maior+1]]
+        x = [p0[0],p1[0],p2[0],p3[0]]    
+        y = [p0[1],p1[1],p2[1],p3[1]]    
+        z = [p0[2],p1[2],p2[2],p3[2]]
+        t = (set_fraction - key[menor]) / (key[maior] - key[menor])    
+        matriz = [l1,l2,l3,l4]
+        fracao = [t**3,t**2,t,1]
+        temp_x = np.matmul(matriz,x)
+        temp_y = np.matmul(matriz,y)
+        temp_z = np.matmul(matriz,z)
+        vx = np.matmul(fracao,temp_x)
+        vy = np.matmul(fracao,temp_y)
+        vz = np.matmul(fracao,temp_z)
+        # print(vx,vy,vz)
+        value_changed = [vx, vy, vz]
+        # GL.encontra(set_fraction,key)
         return value_changed
 
     @staticmethod
@@ -1154,13 +1404,73 @@ class GL:
         # quadros-chave no key.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("OrientationInterpolator : set_fraction = {0}".format(set_fraction))
-        print("OrientationInterpolator : key = {0}".format(key)) # imprime no terminal
-        print("OrientationInterpolator : keyValue = {0}".format(keyValue))
-
+        # print("OrientationInterpolator : set_fraction = {0}".format(set_fraction))
+        # print("OrientationInterpolator : key = {0}".format(key)) # imprime no terminal
+        # print("OrientationInterpolator : keyValue = {0}".format(keyValue))
+        vetores = list(zip(keyValue[::4], keyValue[1::4], keyValue[2::4],keyValue[3::4]))
+        if set_fraction <= key[0]:
+            return list(vetores[0])
+        if set_fraction >= key[-1]:
+            return list(vetores[-1])
+        dicionario = dict(zip(key, vetores))
+        maior = 0
+        menor = 0
+        
+        for i in range(len(key)):
+            if abs(key[i]-set_fraction) <0.001:
+                maior = i+1
+                menor = (i-1)
+                break                
+            if key[i]-set_fraction<key[1] and key[i]-set_fraction>0:
+                maior = i
+                menor = (i-1)
+                break
+        if menor == 0:
+            p0 = dicionario[key[menor]]
+            p1 = p0
+        else:
+            p0 = dicionario[key[menor-1]]
+            p1 = dicionario[key[menor]]
+        if maior == len(key)-1:
+            p2 = dicionario[key[maior]]
+            p3 = p2
+        else:
+            p2 = dicionario[key[maior]]
+            p3 = dicionario[key[maior+1]]
+        t = (set_fraction - key[menor]) / (key[maior] - key[menor])
+        R1 =[0,0,0,0]
+        R2 = [0,0,0,0]
+        R1[3] = math.cos(p1[3]/2)    
+        R1[0] = math.sin(p1[3]/2)*p1[0]
+        R1[1] = math.sin(p1[3]/2)*p1[1]
+        R1[2] = math.sin(p1[3]/2)*p1[2]
+        
+        
+        R2[3] = math.cos(p2[3]/2)    
+        R2[0] = math.sin(p2[3]/2)*p2[0]
+        R2[1] = math.sin(p2[3]/2)*p2[1]
+        R2[2] = math.sin(p2[3]/2)*p2[2]
+        # falta fazer o slerp
         # Abaixo está só um exemplo de como os dados podem ser calculados e transferidos
         value_changed = [0, 0, 1, 0]
-
+        # theta = np.dot(R1,R2)
+        # slerp = [math.sin((1-t)*theta) / math.sin(theta) ] * R1  +  [ math.sin(t*theta) / math.sin(theta) ] * R2
+        dot = np.dot(R1,R2)
+        if dot<0:
+            dot = -dot
+            R1 = np.array(R1)*-1
+        if dot > 0.9995:            # quase iguais: evita divisão por ~0
+            r = np.array(R2) + t * (np.array(R2) - np.array(R1))
+            return r / np.linalg.norm(r)
+        theta = math.acos(dot)
+        a = math.sin((1-t)*theta)/math.sin(theta)
+        b = math.sin(t*theta)/math.sin(theta)
+        slerp = a*np.array(R1) +b*np.array(R2)
+        print(slerp[3])
+        value_changed[3] = 2*math.acos(slerp[3])
+        value_changed[0] = slerp[0]/(math.sin(value_changed[3]/2))
+        value_changed[1] = slerp[1]/(math.sin(value_changed[3]/2))
+        value_changed[2] = slerp[2]/(math.sin(value_changed[3]/2))
         return value_changed
 
     # Para o futuro (Não para versão atual do projeto.)
