@@ -147,7 +147,8 @@ class Renderizador:
                 x+=1
                 i+=2
             j+=2
-            y+=1     
+            y+=1 
+        gl.GL.normais={}    
         # gpu.GPU.bind_framebuffer(gpu.GPU.READ_FRAMEBUFFER, self.framebuffers["FRONT"])
         # gpu.GPU.clear_buffer()
         
