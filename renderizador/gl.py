@@ -30,8 +30,8 @@ class GL:
     posicao_global = 1
     osicao_camera =[]
     # headlight ={}
-    directionalL={"ambientIntensity":0,}
-    inversa = []
+    directionalL={"ambientIntensity":0, "intensity":0, }
+    inversa = [np.identity(4)]
     normal = []
     normais = {}
     @staticmethod
@@ -42,8 +42,10 @@ class GL:
         GL.height = height
         GL.near = near
         GL.far = far
-    def posicao_pixel(alfa, beta, gama, z_s, pontos, Z):  # 3 x 3 (um vértice por linha)
+    def posicao_pixel(alfa, beta, gama, z_s, pontos, Z):  # 3 x 3 (um vértice por linha)'
         pesos = np.array([alfa/z_s[0], beta/z_s[1], gama/z_s[2]])
+        # print(pontos)
+        
         return (pesos @ pontos) / Z    
     def encontra_normal(p0,p1,p2):
         p0_p1 = np.subtract(p1,p0)
@@ -59,13 +61,15 @@ class GL:
         final = final@n
         final = final/np.linalg.norm(final)
         return final
-    def enontra_luz_difusa(k, r):
+    def enontra_luz_difusa(k, r, n):
        
         if r == 0:
             a = 1
         else:
             a = 1/(r**2)
         I = GL.directionalL["intensity"]
+        if I == 0:
+            return [0,0,0],0
         og =GL.directionalL["direction"].copy()
         og.append(0)
         # t = np.array(GL.matriz_transformacao[-1])
@@ -76,7 +80,7 @@ class GL:
         og = np.matmul(og, final)
         og = og[:3] / np.linalg.norm(og[:3])
         # print(f"normal {GL.normal}direcao {GL.directionalL["direction"]}")
-        ang = np.dot(GL.normal,og[:3])
+        ang = np.dot(n,og[:3])
         temp  = np.multiply(k,I)
         temp = np.array(temp)*a
         # print(f"temp {temp}, ---")
@@ -117,6 +121,8 @@ class GL:
     
     def acha_cor_especular_1(k):
             I = GL.directionalL["intensity"]
+            if I == 0:
+                return [0,0,0],0,[0,0,0]
             temp = I*np.array(k)
             og =GL.directionalL["direction"].copy()
             og.append(0)
@@ -130,31 +136,13 @@ class GL:
             cam_local = cam_local[:3] / cam_local[3]
             return og,cam_local,temp
     def encontra_normal_pixel(alfa,beta,gama,z_s,pontos,Z):
-            # p0 = pontos[0][:3]
-            # p1 = pontos[1][:3]
-            # p2 = pontos[2][:3]
-            # r_1_1 = alfa*(p0[0]/z_s[0])
-            # r_1_2 = beta*(p0[1]/z_s[0])            
-            # r_1_3 = gama*(p0[2]/z_s[0])
-            # x = (r_1_1+r_1_2+ r_1_3)/Z
-            
-            # g_1_1 = alfa*(p1[0]/z_s[1])
-            # g_1_2 = beta*(p1[1]/z_s[1])            
-            # g_1_3 = gama*(p1[2]/z_s[1])
-            # y = (g_1_1+g_1_2+ g_1_3)/Z
-            
-            # b_1_1 = alfa*(p0[0]/z_s[2])
-            # b_1_2 = beta*(p1[1]/z_s[2])            
-            # b_1_3 = gama*(p2[2]/z_s[2])
             pesos = np.array([alfa/z_s[0], beta/z_s[1], gama/z_s[2]])
-            #
-            # z= (b_1_1+b_1_2+ b_1_3)/Z
-            # normal = [x,y,z]
             normal = (pesos @ pontos) / Z    
             GL.normal = normal / np.linalg.norm(normal)
-            # print(f"normal {GL.normal}")
-            # GL.normal = normal
     def acha_cor_especular_2(cam_local,p,og,s,N,temp):
+        if og[0]==0 and og[1]==0 and og[2]==0:
+            # print("erro")
+            return [0,0,0]
         p = p[:3]
         # print(p)
         v = cam_local - np.array(p)
@@ -164,7 +152,6 @@ class GL:
         # p = np.array(p)/np.linalg.norm(p)
         bi = (np.array(og))+np.array(v)
         bi = bi/np.linalg.norm(bi)
-        # print(bi)
         ang = np.dot(N,bi)
         # print(ang)
         ang = min(1, max(0,ang))
@@ -395,17 +382,7 @@ class GL:
         # quantidade de pontos é sempre multiplo de 3, ou seja, 6 valores ou 12 valores, etc.
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o TriangleSet2D
         # você pode assumir inicialmente o desenho das linhas com a cor emissiva (emissiveColor).
-        # image_texture = gpu.GPU.load_texture(current_texture[0])
-        # print (image_texture)
-        # # print(z_s)
-        # print(f"colors {colors}")
-        # print(f"colorspv {colorPerVertex}")
-        # print(f"color {color}")
-        # print(f"verticces {vertices}")
-        # const = 255
-        # if current_texture:
-        #     const = 1
-        
+        # print(pontos)
         def limite(u,v):
             if u>=0:
                 if u< GL.width:
@@ -413,12 +390,16 @@ class GL:
                         if v<GL.height:
                             return True
             return False
-        cor = colors["emissiveColor"]
+        cor_emissiva = np.array(colors["emissiveColor"])
+        cor = cor_emissiva
         transp = colors["transparency"]
         especular = colors["specularColor"]
         s = colors["shininess"]
         difusa = colors["diffuseColor"]
-        pontos_1 = pontos
+        # pontos_1 = pontos
+        pontos_1 = list(zip(pontos[::3], pontos[1::3],pontos[2::3]))
+        normais=[]
+        d = np.zeros(3)        
         if len(GL.normais) != 0:
             normal_v_1 = np.mean(GL.normais[f"{[pontos[0][0],pontos[0][1],pontos[0][2]]}"],axis=0)
             normal_v_2 = np.mean(GL.normais[f"{[pontos[1][0],pontos[1][1],pontos[1][2]]}"],axis=0)
@@ -428,11 +409,19 @@ class GL:
             normal_v_3 = normal_v_3/np.linalg.norm(normal_v_3)
             normais = [normal_v_1,normal_v_2,normal_v_3]
         p = np.mean([pontos[0], pontos[1], pontos[2]], axis=0)[:3]
-        if especular != [0,0,0]:
-            og,cam_local,temp = GL.acha_cor_especular_1(especular)
-        if cor ==[0,0,0] and difusa !=[0,0,0]:
-            d,grau=GL.enontra_luz_difusa(k=difusa,r=0)
-            cor = np.array(d)
+        # if especular != [0,0,0]:
+        og,cam_local,temp = GL.acha_cor_especular_1(especular)
+        # print(og,cam_local,temp)
+        # if cor ==[0,0,0] and difusa !=[0,0,0]:
+        if len(GL.normais) != 0:
+            d,grau=GL.enontra_luz_difusa(k=difusa,r=0, n=normais[0])
+            d1,grau=GL.enontra_luz_difusa(k=difusa,r=0, n=normais[1])
+            d2,grau=GL.enontra_luz_difusa(k=difusa,r=0, n=normais[2])
+            d = (np.array(d)+np.array(d1)+np.array(d2))/3
+        else:
+            d,grau=GL.enontra_luz_difusa(k=difusa,r=0, n=GL.normal)
+                
+        cor = np.array(d)
         cor1 = color
         r=cor[0]
         g=cor[1]
@@ -533,7 +522,6 @@ class GL:
             r_1 = abs(r_1)
             g_1 = abs(g_1)
             b_1 = abs(b_1)
-            # print(255*r,255*g,255*b)
         def cria_aresta(p,pp):
             return [pp[0]-p[0],pp[1]-p[1]]
         def verifica_individual(a,n):
@@ -543,21 +531,9 @@ class GL:
             b_y = a[1]
             return (a_x*b_y)-(a_y*b_x)
         
-        p0 = [vertices[0],vertices[1]]
-        p1 = [vertices[2],vertices[3]]
-        p2 = [vertices[4],vertices[5]]
-        a0 = cria_aresta(p0,p1); # (bx-ax)(by-ay)
-        a1 = cria_aresta(p1,p2); # (cx-bx)(cy-by)
-        a2 = cria_aresta(p2,p0); # (ax-cx)(ay-cy)
-        xa_xb = cria_aresta(p1,p0)
-        alpha2 = -(xa_xb[0]*a1[1])+ (xa_xb[1]*a1[0])
-        b_c = cria_aresta(p2,p1)
-        beta2 = -(b_c[0]*a2[1])+(b_c[1]*a2[0])
-        
-        def esta_dentro(p0,p1,p2, p):
+
+        def esta_dentro(p0,p1,p2, p, indice):
             nonlocal cont,a0,a1,a2, alpha2, b_c, beta2, pontos_1,cor,r,g,b, r_1, g_1,b_1
-            # P0, P1, P2 = list(zip(pontos[0][::3], pontos[1::3][1], pontos[2][2::3]))
-            # print(pontos_1)
 
             n0 =cria_aresta(p0,p) # (px-ax)(py-ay)
             n1 =cria_aresta(p1,p) # (px-bx)(py-by)
@@ -575,84 +551,91 @@ class GL:
                         gama = 1-alpha-beta
                         Z_norm = 1/(alpha/z_norm[0] + beta/z_norm[1]+ gama/z_norm[2])
                         Z = (alpha/z_s[0] + beta/z_s[1]+ gama/z_s[2])
-                        pix = GL.posicao_pixel(alpha,beta,gama,z_s,pontos_1,Z)
-                        if especular !=[0,0,0]:
-                            if len(GL.normais)!=0:
-                                GL.encontra_normal_pixel(alpha,beta,gama,z_s,normais,Z)
-                            esp = GL.acha_cor_especular_2(cam_local,pix,og,s,GL.normal,temp)
-                            cor = np.array(d)+np.array(esp)
-                            r = cor[0]*255
-                            if r>255:
-                                r = 255                                                                 
-                            g = cor[1]*255
-                            if g >255:
-                                g = 255
-                            b = cor[2]*255                                                                     
-                            if b > 255:     
-                                b = 255                                                             
-                            # print(esp)
-                            r_1 = r
-                            g_1 = g
-                            b_1 = b
+                        pix = GL.posicao_pixel(alpha,beta,gama,z_s,pontos_1[indice],Z)
+                        # if especular !=[0,0,0]:
+                            # print("entrou")
+                        if len(GL.normais)!=0:
+                            GL.encontra_normal_pixel(alpha,beta,gama,z_s,normais,Z)
+                        esp = GL.acha_cor_especular_2(cam_local,pix,og,s,GL.normal,temp)
+                        d,grau=GL.enontra_luz_difusa(k=difusa,r=0, n=GL.normal)
+                        cor = np.array(cor_emissiva) +np.array(d)+np.array(esp)
+                        r = cor[0]*255
+                        if r>255:
+                            r = 255                                                                 
+                        g = cor[1]*255
+                        if g >255:
+                            g = 255
+                        b = cor[2]*255                                                                     
+                        if b > 255:     
+                            b = 255                                                             
+                        r_1 = r
+                        g_1 = g
+                        b_1 = b
                         if verifica_profundidade(Z_norm,p):
                             if color:
                                 verifica_cor(alpha,beta,gama,cor1,Z,Z_norm,p)
+                                r = r_1
+                                g = g_1
+                                b = b_1
                                 cont+=1
                             elif current_texture:
                                 verifica_cor_textura(alpha,beta,gama,Z,Z_norm,p)
+                                r = r_1
+                                g = g_1
+                                b = b_1
                             return True    
             return False
         def caixa(p0,p1,p2):
-            x_min = 25500
-            y_min = 25500
-            x_max = 0
-            y_max =0
-            if p0[0] <x_min:
-                x_min = p0[0]
-            if p1[0] <x_min:
-                x_min = p1[0]
-            if p2[0] <x_min:
-                x_min = p2[0]
-            if p0[1] <y_min:
-                y_min = p0[1]
-            if p1[1] <y_min:
-                y_min = p1[1]
-            if p2[1] <y_min:
-                y_min = p2[1]
-            if p0[0] >x_max:
-                x_max = p0[0]
-            if p1[0] >x_max:
-                x_max = p1[0]
-            if p2[0] >x_max:
-                x_max = p2[0]
-            if p0[1] >y_max:
-                y_max = p0[1]
-            if p1[1] >y_max:
-                y_max = p1[1]
-            if p2[1] >y_max:
-                y_max = p2[1]
-            return [round(x_min),round(y_min),round(x_max),round(y_max)]
-        def preenche_triangulo(p0,p1,p2):
+            x = [p0[0],p1[0], p2[0]]
+            y = [p0[1],p1[1], p2[1]]
+            minimo_x = min(x)
+            maximo_x = max(x)
+            minimo_y =min(y)
+            maximo_y = max(y)
+            if minimo_x<0:
+                minimo_x = 0
+            if minimo_y<0:
+                minimo_y = 0
+            if maximo_x>GL.width:
+                maximo_x = GL.width-1
+            if maximo_y>GL.height:
+                maximo_y =( GL.height-1)            
+            return [round(minimo_x),round(minimo_y),round(maximo_x),round(maximo_y )]
+        def preenche_triangulo(p0,p1,p2,indice):
             c = caixa(p0,p1,p2)
             j = (c[1])
             while j<=c[3]:
                 i = c[0]
                 while i<=c[2]:
-                    if limite(i,j):
-                        if esta_dentro(p0,p1,p2,[(i+0.5),(j+0.5)]):
-                            if prof:
-                                # print(f"rgb {r,g,b}")
-                                gpu.GPU.draw_pixel([round(i), round(j)], gpu.GPU.RGB8, [round(r), round(g), round(b)])  # altera pixel (u, v, tipo, r, g, b)        
+                    if esta_dentro(p0,p1,p2,[(i+0.5),(j+0.5)], indice):
+                        gpu.GPU.draw_pixel([round(i), round(j)], gpu.GPU.RGB8, [round(r), round(g), round(b)])  # altera pixel (u, v, tipo, r, g, b)        
                             
                     i+=1
                 j+=1
-        i=0
+        i=2
+        cont = 0
         pontos =[]
         pontos = list(zip(vertices[::2], vertices[1::2]))
-        preenche_triangulo(pontos[0],pontos[1], pontos[2])
-
-
-
+        # print(len(pontos),len(pontos_1))
+        while i<len(pontos):
+            p0 = pontos[i-2]
+            p1 = pontos[i-1]
+            p2 = pontos[i]
+            a0 = cria_aresta(p0,p1); # (bx-ax)(by-ay)
+            a1 = cria_aresta(p1,p2); # (cx-bx)(cy-by)
+            a2 = cria_aresta(p2,p0); # (ax-cx)(ay-cy)
+            xa_xb = cria_aresta(p1,p0)
+            alpha2 = -(xa_xb[0]*a1[1])+ (xa_xb[1]*a1[0])
+            b_c = cria_aresta(p2,p1)
+            beta2 = -(b_c[0]*a2[1])+(b_c[1]*a2[0])
+            if alpha2 ==0:
+                return
+            
+            preenche_triangulo(pontos[i-2],pontos[i-1], pontos[i],cont)
+            # print(pontos[i-2],pontos[i-1], pontos[i],cont)
+            i+=3
+            cont+=1
+        # print(cont,i)
     @staticmethod
     def triangleSet(point,colors, coordIndex='', colorPerVertex='', color='', colorIndex='',
                        texCoord='', texCoordIndex='', current_texture=''):
@@ -671,10 +654,7 @@ class GL:
         # (emissiveColor), conforme implementar novos materias você deverá suportar outros
         # tipos de cores.
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        # print(f" Normais{GL.normais}")
         ajuste = np.array([[(GL.width/2),0,0,(GL.width/2)],[0,-(GL.height/2),0,(GL.height/2)],[0,0,1,0],[0,0,0,1]])
-        # print("TriangleSet : pontos = {0}".format(point)) # imprime no terminal pontos
-        # print("TriangleSet : colors = {0}".format(colors)) # imprime no terminal as cores
         pontos = []
         pontos_transformados = []
         i = 2
@@ -684,12 +664,8 @@ class GL:
         # print(f"pontos{pontos}\n")
         z=[]
         z_norm = []    
-        # print(f"matriztrot {GL.matriz_transformacao}")
-        # n = GL.transforma_normal(n)
-        # print(n)
 
 
-        # print(f" Normais{GL.normais}")
         n = GL.encontra_normal(pontos[0],pontos[1],pontos[2])
         GL.normal = n
         for j in range(len(pontos)):
@@ -711,8 +687,8 @@ class GL:
             result.append(i[0])
             result.append(i[1])
             # z.append(i[2])
-        GL.triangleSet2D(result,colors, coordIndex, colorPerVertex, color, colorIndex,
-                       texCoord, texCoordIndex, current_texture, z, z_norm,pontos)
+        
+        GL.triangleSet2D(result,colors, coordIndex, colorPerVertex, color, colorIndex, texCoord, texCoordIndex, current_texture, z, z_norm,pontos)
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
         # for i in pontos_transformados:
         #     # print(f"a {int(i[0]), int(i[1])}")
@@ -1115,10 +1091,10 @@ class GL:
                     triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
                         # vira = 1
                     t+=1
-                    for k in range(len(triangulos)):
-                        if colorPerVertex:
-                        # print(f"triangulos {k}\n")
-                            GL.triangleSet(triangulos[k],colors, coordIndex, colorPerVertex, cores[i], colorIndex,
+                for k in range(len(triangulos)):
+                    if colorPerVertex:
+                    # print(f"triangulos {k}\n")
+                        GL.triangleSet(triangulos[k],colors, coordIndex, colorPerVertex, cores[i], colorIndex,
                                 texCoord, texCoordIndex, current_texture)         
         if current_texture:
             GL.image_texture = gpu.GPU.load_texture(current_texture[0])
@@ -1343,10 +1319,10 @@ class GL:
         # na primeira e na última chave não forem idênticos, o campo closed será ignorado.
 
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
-        print("SplinePositionInterpolator : set_fraction = {0}".format(set_fraction))
-        print("SplinePositionInterpolator : key = {0}".format(key)) # imprime no terminal
-        print("SplinePositionInterpolator : keyValue = {0}".format(keyValue))
-        print("SplinePositionInterpolator : closed = {0}".format(closed))
+        # print("SplinePositionInterpolator : set_fraction = {0}".format(set_fraction))
+        # print("SplinePositionInterpolator : key = {0}".format(key)) # imprime no terminal
+        # print("SplinePositionInterpolator : keyValue = {0}".format(keyValue))
+        # print("SplinePositionInterpolator : closed = {0}".format(closed))
         vetores = list(zip(keyValue[::3], keyValue[1::3], keyValue[2::3]))
         if set_fraction <= key[0]:
             return list(vetores[0])
