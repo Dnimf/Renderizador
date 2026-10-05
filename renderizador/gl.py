@@ -62,7 +62,6 @@ class GL:
         final = final/np.linalg.norm(final)
         return final
     def enontra_luz_difusa(k, r, n):
-       
         if r == 0:
             a = 1
         else:
@@ -383,20 +382,12 @@ class GL:
         # O parâmetro colors é um dicionário com os tipos cores possíveis, para o TriangleSet2D
         # você pode assumir inicialmente o desenho das linhas com a cor emissiva (emissiveColor).
         # print(pontos)
-        def limite(u,v):
-            if u>=0:
-                if u< GL.width:
-                    if v>=0:
-                        if v<GL.height:
-                            return True
-            return False
         cor_emissiva = np.array(colors["emissiveColor"])
         cor = cor_emissiva
         transp = colors["transparency"]
         especular = colors["specularColor"]
         s = colors["shininess"]
         difusa = colors["diffuseColor"]
-        # pontos_1 = pontos
         pontos_1 = list(zip(pontos[::3], pontos[1::3],pontos[2::3]))
         normais=[]
         d = np.zeros(3)        
@@ -409,10 +400,7 @@ class GL:
             normal_v_3 = normal_v_3/np.linalg.norm(normal_v_3)
             normais = [normal_v_1,normal_v_2,normal_v_3]
         p = np.mean([pontos[0], pontos[1], pontos[2]], axis=0)[:3]
-        # if especular != [0,0,0]:
         og,cam_local,temp = GL.acha_cor_especular_1(especular)
-        # print(og,cam_local,temp)
-        # if cor ==[0,0,0] and difusa !=[0,0,0]:
         if len(GL.normais) != 0:
             d,grau=GL.enontra_luz_difusa(k=difusa,r=0, n=normais[0])
             d1,grau=GL.enontra_luz_difusa(k=difusa,r=0, n=normais[1])
@@ -436,7 +424,6 @@ class GL:
             b*=255
             if b>255:
                 b =255
-            # print(f"rgb {r,g,b}")
         r_1 = r
         g_1 = g
         b_1 = b
@@ -549,15 +536,15 @@ class GL:
                         alpha = alpha1/alpha2
                         beta= beta1/beta2
                         gama = 1-alpha-beta
-                        Z_norm = 1/(alpha/z_norm[0] + beta/z_norm[1]+ gama/z_norm[2])
-                        Z = (alpha/z_s[0] + beta/z_s[1]+ gama/z_s[2])
+                        Z_norm = 1/(alpha/z_norm[indice-2] + beta/z_norm[indice-1]+ gama/z_norm[indice])
+                        Z = (alpha/z_s[indice-2] + beta/z_s[indice-1]+ gama/z_s[indice])
                         pix = GL.posicao_pixel(alpha,beta,gama,z_s,pontos_1[indice],Z)
                         # if especular !=[0,0,0]:
                             # print("entrou")
                         if len(GL.normais)!=0:
                             GL.encontra_normal_pixel(alpha,beta,gama,z_s,normais,Z)
                         esp = GL.acha_cor_especular_2(cam_local,pix,og,s,GL.normal,temp)
-                        d,grau=GL.enontra_luz_difusa(k=difusa,r=0, n=GL.normal)
+                        # d,grau=GL.enontra_luz_difusa(k=difusa,r=0, n=GL.normal)
                         cor = np.array(cor_emissiva) +np.array(d)+np.array(esp)
                         r = cor[0]*255
                         if r>255:
@@ -941,11 +928,9 @@ class GL:
         triangulos = []
         while j<(len(index)):
             if index[j] == -1:
-                # print(len(triangulos))
-                for k in triangulos:
-                    GL.triangleSet(k,colors)
+                j+=2
                 vira =0
-                triangulos =[]
+                pass
             else:
                 p1 = pontos[index[j-2]]
                 p2 = pontos[index[j-1]]
@@ -972,10 +957,8 @@ class GL:
                 else:
                     GL.normais[f"{p3}"].append(n)
             j+=1
-        # Exemplo de desenho de um pixel branco na coordenada 10, 10
-        # gpu.GPU.draw_pixel([10, 10], gpu.GPU.RGB8, [255, 255, 255])  # altera pixel
-        # print("----------------------------------\n\n\n\n")
-
+        for k in triangulos:
+            GL.triangleSet(k,colors)
     @staticmethod
     def indexedFaceSet(coord, coordIndex, colorPerVertex, color, colorIndex,
                        texCoord, texCoordIndex, colors, current_texture):
