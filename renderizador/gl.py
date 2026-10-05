@@ -6,7 +6,7 @@
 """
 Biblioteca Gráfica / Graphics Library.
 
-Desenvolvido por: <SEU NOME AQUI>
+Desenvolvido por: Daniel Martins de Freitas
 Disciplina: Computação Gráfica
 Data: <DATA DE INÍCIO DA IMPLEMENTAÇÃO>
 """
@@ -42,7 +42,7 @@ class GL:
         GL.height = height
         GL.near = near
         GL.far = far
-    def posicao_pixel(alfa, beta, gama, z_s, pontos, Z):  # 3 x 3 (um vértice por linha)'
+    def posicao_pixel(alfa, beta, gama, z_s, pontos, Z,indice):  # 3 x 3 (um vértice por linha)'
         pesos = np.array([alfa/z_s[0], beta/z_s[1], gama/z_s[2]])
         # print(pontos)
         
@@ -454,7 +454,7 @@ class GL:
                 gpu.GPU.draw_pixel([int(x), int(y)],gpu.GPU.DEPTH_COMPONENT32F ,[Z_norm])
                 return True
             return False
-        def verifica_cor_textura(alfa,beta,gama,z,Z_norm,p):
+        def verifica_cor_textura(alfa,beta,gama,z,Z_norm,p,indice):
             nonlocal r,g,b, r_1,g_1,b_1
             # print(f"textcoord :{texCoord}")
             # print(f"textcorordindex :{texCoordIndex}")
@@ -467,8 +467,8 @@ class GL:
             # print(len(GL.image_texture[0]),len(GL.image_texture))
             u = ((alfa*(u_0/z_s[0])) + (beta*(u_1/z_s[1])) +(gama*(u_2/z_s[2])))/z                        
             v = ((alfa*(v_0/z_s[0])) + (beta*(v_1/z_s[1])) +(gama*(v_2/z_s[2])))/z
-            u_f = (len(GL.image_texture[0])-1)*u                     
-            v_f = (len(GL.image_texture)-1)*v
+            u_f = (len(GL.image_texture[0])-1)*v                
+            v_f = (len(GL.image_texture)-1)*u
             if u_f>255:
                 u_f =255
             if v_f>255:
@@ -479,7 +479,7 @@ class GL:
                 v_f = 0
             # print(u,v)
             # print(u_f,v_f)
-            cor = GL.image_texture[math.floor(u_f),(255-math.floor(v_f))]
+            cor = GL.image_texture[(math.floor(v_f)),(255-math.floor(u_f))]
             # r = cor[0]                     
             # g = cor[1]                     
             # b = cor[2]
@@ -536,9 +536,9 @@ class GL:
                         alpha = alpha1/alpha2
                         beta= beta1/beta2
                         gama = 1-alpha-beta
-                        Z_norm = 1/(alpha/z_norm[indice-2] + beta/z_norm[indice-1]+ gama/z_norm[indice])
-                        Z = (alpha/z_s[indice-2] + beta/z_s[indice-1]+ gama/z_s[indice])
-                        pix = GL.posicao_pixel(alpha,beta,gama,z_s,pontos_1[indice],Z)
+                        Z_norm = 1/(alpha/z_norm[0] + beta/z_norm[1]+ gama/z_norm[2])
+                        Z = (alpha/z_s[0] + beta/z_s[1]+ gama/z_s[2])
+                        pix = GL.posicao_pixel(alpha,beta,gama,z_s,pontos_1[indice],Z,indice)
                         # if especular !=[0,0,0]:
                             # print("entrou")
                         if len(GL.normais)!=0:
@@ -566,7 +566,7 @@ class GL:
                                 b = b_1
                                 cont+=1
                             elif current_texture:
-                                verifica_cor_textura(alpha,beta,gama,Z,Z_norm,p)
+                                verifica_cor_textura(alpha,beta,gama,Z,Z_norm,p,indice)
                                 r = r_1
                                 g = g_1
                                 b = b_1
@@ -640,10 +640,12 @@ class GL:
         # inicialmente, para o TriangleSet, o desenho das linhas com a cor emissiva
         # (emissiveColor), conforme implementar novos materias você deverá suportar outros
         # tipos de cores.
+        # print(point, texCoord)
         # O print abaixo é só para vocês verificarem o funcionamento, DEVE SER REMOVIDO.
         ajuste = np.array([[(GL.width/2),0,0,(GL.width/2)],[0,-(GL.height/2),0,(GL.height/2)],[0,0,1,0],[0,0,0,1]])
         pontos = []
         pontos_transformados = []
+        
         i = 2
         while i<len(point):
             pontos.append([point[i-2],point[i-1],point[i],1])
@@ -1100,10 +1102,12 @@ class GL:
             # print(textid)
             # print(textura)
             for i in textid:
-                tex.append([textura[i[0]], textura[i[1]], textura[i[2]]])             
+                tex.append([textura[i[0]], textura[i[1]], textura[i[2]]])
+            # print(tex)             
+            triangulos = []
+            
             for i in range(len(listas)):
                 t = 2
-                triangulos = []
                 vira = 0
                 while t<len(listas[i]):
                     i1 = listas[i]
@@ -1125,11 +1129,13 @@ class GL:
                         GL.normais[f"{p3}"].append(n)  
                     triangulos.append([p1[0],p1[1],p1[2],p2[0],p2[1],p2[2],p3[0],p3[1],p3[2]])
                         # vira = 1
+                    # print(len(tex),len(triangulos),triangulos)
                     t+=1
                 for k in range(len(triangulos)):
-                    # print(f"triangulos {k}\n")
+                            # print(f"triangulos {k}\n")
+                    # print(i,tex,tex[i])
                     GL.triangleSet(triangulos[k],colors, coordIndex, colorPerVertex, color, colorIndex,
-                        tex[i], texCoordIndex, 1)           
+                            tex[k], texCoordIndex, 1)           
 
 
         # Exemplo de desenho de um pixel branco na coordenada 10, 10
